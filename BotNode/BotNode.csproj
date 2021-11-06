@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BacktesterEngine\BacktesterEngine.csproj" />
+    <ProjectReference Include="..\BotEngine\BotEngine.csproj" />
+    <ProjectReference Include="..\TelegramEngine\TelegramEngine.csproj" />
+    <ProjectReference Include="..\UtilsLib\UtilsLib.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <ApplicationIcon />
+    <OutputType>Exe</OutputType>
+    <StartupObject />
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.9" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\BacktesterLib\BacktesterLib.csproj" />
+    <ProjectReference Include="..\SignalsEngine\SignalsEngine.csproj" />
+    <ProjectReference Include="..\BrokerLib\BrokerLib.csproj" />
+    <ProjectReference Include="..\TelegramLib\TelegramLib.csproj" />
+    <ProjectReference Include="..\UtilsLib\UtilsLib.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
