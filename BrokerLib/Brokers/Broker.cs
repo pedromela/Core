@@ -92,7 +92,7 @@ namespace BrokerLib.Brokers
             _brokerDescription = new BrokerDescription(brokerId, brokerType);
             _marketType = marketType;
             _defaultAccessPoint = defaultAccessPoint;
-            _hourDifference = DateTime.Now - ;
+            //_hourDifference = DateTime.Now - ;
         }
 
         public virtual BrokerLib.Brokers GetBrokerId()
