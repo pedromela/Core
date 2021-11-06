@@ -357,7 +357,7 @@ namespace TelegramEngine.Telegram
             }
         }
 
-        public override float CloseTrades(Transaction t, string description = "")
+        public override void CloseTrades(Transaction t, string description = "")
         {
             try
             {
@@ -388,7 +388,6 @@ namespace TelegramEngine.Telegram
             {
                 TelegramEngine.DebugMessage(e);
             }
-            return 0;
         }
 
         public bool TelegramTransactionsProcessed(IEnumerable<Transaction> transactions) 
@@ -457,72 +456,6 @@ namespace TelegramEngine.Telegram
                     context.ChannelScores.Update(score);
 
                     context.SaveChanges();
-                }
-            }
-            catch (Exception e)
-            {
-                TelegramEngine.DebugMessage(e);
-            }
-        }
-
-
-        public override void StoreScore(bool Success, float gainedAmount, bool UpdateOnlyProfit = false, CurrentProfits currentProfits = null)
-        {
-            try
-            {
-                if (_backtest)
-                {
-                    base.StoreScore(Success, gainedAmount, UpdateOnlyProfit);
-                }
-                else
-                {
-                    using (var context = TelegramDBContext.newDBContext())
-                    {
-
-                        if (gainedAmount > -0.000001 && gainedAmount < 0.000001)
-                        {
-                            gainedAmount = 0.0f;
-                        }
-
-                        TelegramScore score;
-
-                        if (!context.TelegramScores.Any(s => s.BotParametersId == _botParameters.id))
-                        {
-                            score = new TelegramScore();
-                            score.Positions = 0;
-                            score.BotParametersId = _botParameters.id;
-                            score.Successes = 0;
-                            score.ActiveTransactions = 0;
-                            score.CurrentProfit = 0.0f;
-                            score.MaxDrawBack = 0.0f;
-                            context.TelegramScores.Add(score);
-                            context.SaveChanges();
-                        }
-                        score = context.TelegramScores.Single(s => s.BotParametersId == _botParameters.id);
-
-                        if (!UpdateOnlyProfit)
-                        {
-                            if (Success)
-                            {
-                                score.Successes += 1;
-                            }
-                            score.Positions += 1;
-                            score.AmountGained += gainedAmount;
-                            score.AmountGainedDaily += gainedAmount;
-                        }
-                        score.ActiveTransactions = currentProfits.CurrentTransactions;
-
-                        score.CurrentProfit = (float.IsNaN(currentProfits.CurrentProfit) || float.IsInfinity(currentProfits.CurrentProfit)) ? 0.0f : currentProfits.CurrentProfit;
-
-                        if (score.AmountGained < score.MaxDrawBack)
-                        {
-                            score.MaxDrawBack = score.AmountGained;
-                        }
-
-                        context.TelegramScores.Update(score);
-
-                        context.SaveChanges();
-                    }
                 }
             }
             catch (Exception e)
