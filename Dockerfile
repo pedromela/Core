@@ -20,4 +20,4 @@ COPY --from=build-env /app/out .
 # Use your project name for the second parameter
 #ENTRYPOINT [ "dotnet", "BotEngine.dll" ]
 # for heroku
-CMD ASPNETCORE_URLS=http://*:$PORT dotnet BotEngine/BotEngine.dll
+CMD ASPNETCORE_URLS=http://*:$PORT dotnet BotEngine.dll
