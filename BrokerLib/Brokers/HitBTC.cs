@@ -8,6 +8,7 @@ using BrokerLib.Models;
 using static BrokerLib.BrokerLib;
 using System.Threading;
 using BrokerLib.Market;
+using BrokerLib.Exceptions;
 
 namespace BrokerLib.Brokers
 {
@@ -108,77 +109,68 @@ namespace BrokerLib.Brokers
 
         public override Trade CloseTrade(Trade trade, Transaction transaction, AccessPoint accessPoint, string description = "")
         {
-            try
+            TransactionType apiTransactionType = BrokerLib.OppositeTransactionType(transaction.Type);
+            TransactionType tradeTansactionType = BrokerLib.CloseTransactionType(transaction.Type);
+
+            string url = _url + "2/margin/order";
+            string basicAuth = accessPoint.PublicKey + ":" + accessPoint.PrivateKey;
+            string data = String.Format("symbol={0}&side={1}&quantity={2:0.########}&type={3}",
+                            transaction.Market,
+                            apiTransactionType,
+                            trade.Amount.ToString(new CultureInfo("en-US")), "market");
+
+            string response = Request.Post(url, basicAuth, data, "application/x-www-form-urlencoded");
+            dynamic responseObj = JsonConvert.DeserializeObject(response);
+            string id = "";
+            float quantity = 0;
+            float price = 0;
+
+            if (responseObj.error != null)
             {
-                TransactionType apiTransactionType = BrokerLib.OppositeTransactionType(transaction.Type);
-                TransactionType tradeTansactionType = BrokerLib.CloseTransactionType(transaction.Type);
-
-                string url = _url + "2/margin/order";
-                string basicAuth = accessPoint.PublicKey + ":" + accessPoint.PrivateKey;
-                string data = String.Format("symbol={0}&side={1}&quantity={2:0.########}&type={3}",
-                                transaction.Market,
-                                apiTransactionType,
-                                trade.Amount.ToString(new CultureInfo("en-US")), "market");
-
-                string response = Request.Post(url, basicAuth, data, "application/x-www-form-urlencoded");
-                dynamic responseObj = JsonConvert.DeserializeObject(response);
-
-                string id = "";
-                float quantity = 0;
-                float price = 0;
-
-                if (responseObj.error != null)
+                if (responseObj.error.code == 20032)
                 {
-                    BrokerLib.DebugMessage(String.Format("HitBTC::CloseTrade() : Trade error: {0}", (string)responseObj.error.description));
-                    return null;
+                    throw new MarginAccountNotFoundException(responseObj.message);
                 }
-
-                if (responseObj.id == null)
-                {
-                    BrokerLib.DebugMessage(String.Format("HitBTC::CloseTrade() : Trade error, responseObj.id is null"));
-                    return null;
-                }
-                else
-                {
-                    id = (string)responseObj.id;
-                }
-
-                if (responseObj.quantity == null)
-                {
-                    BrokerLib.DebugMessage(String.Format("HitBTC::CloseTrade() : Trade error, responseObj.quantity is null"));
-                    return null;
-                }
-                else
-                {
-                    quantity = (float)responseObj.quantity;
-                }
-
-                if (responseObj.tradesReport == null || responseObj.tradesReport[0].price == null)
-                {
-                    BrokerLib.DebugMessage(String.Format("HitBTC::CloseTrade() : Trade error, responseObj.tradesReport[0].price is null"));
-                    price = 0;
-                }
-                else
-                {
-                    price = (float)responseObj.tradesReport[0].price;
-                }
-
-                Trade closetrade = new Trade(accessPoint.id,
-                        transaction.id,
-                        id,
-                        quantity,
-                        price,
-                        transaction.Market,
-                        tradeTansactionType,
-                        trade.id);
-
-                return closetrade;
+                throw new TradeErrorException(String.Format("HitBTC::CloseTrade() : Trade error: {0}", (string)responseObj.error.description));
             }
-            catch (Exception e)
+
+            if (responseObj.id == null)
             {
-                BrokerLib.DebugMessage(e);
+                throw new TradeErrorException(String.Format("HitBTC::CloseTrade() : Trade error, responseObj.id is null"));
             }
-            return null;
+            else
+            {
+                id = (string)responseObj.id;
+            }
+
+            if (responseObj.quantity == null)
+            {
+                throw new TradeErrorException(String.Format("HitBTC::CloseTrade() : Trade error, responseObj.quantity is null"));
+            }
+            else
+            {
+                quantity = (float)responseObj.quantity;
+            }
+
+            if (responseObj.tradesReport == null || responseObj.tradesReport[0].price == null)
+            {
+                throw new TradeErrorException(String.Format("HitBTC::CloseTrade() : Trade error, responseObj.tradesReport[0].price is null"));
+            }
+            else
+            {
+                price = (float)responseObj.tradesReport[0].price;
+            }
+
+            Trade closetrade = new Trade(accessPoint.id,
+                    transaction.id,
+                    id,
+                    quantity,
+                    price,
+                    transaction.Market,
+                    tradeTansactionType,
+                    trade.id);
+
+            return closetrade;
         }
 
         public override Trade Order(Transaction transaction, AccessPoint accessPoint, float amount)
@@ -463,10 +455,13 @@ namespace BrokerLib.Brokers
                 string url = String.Format(_url + "2/public/candles/{0}?period={1}&from={2}&limit={3}", market, timeFrame.ToString(), date, lastCount);
                 string result = Request.Get(url);
                 List<Candle> candles = JsonConvert.DeserializeObject<List<Candle>>(result);
-                foreach (Candle candle in candles)
+                if (candles != null)
                 {
-                    candle.TimeFrame = timeFrame;
-                    candle.Symbol = market;
+                    foreach (Candle candle in candles)
+                    {
+                        candle.TimeFrame = timeFrame;
+                        candle.Symbol = market;
+                    }
                 }
 
 

@@ -10,6 +10,8 @@ using SignalsEngine.Indicators;
 using BrokerLib.Market;
 using System.Collections.Generic;
 using System.Linq;
+using UtilsLib.Utils;
+using BrokerLib.Exceptions;
 
 namespace BotEngine.Bot
 {
@@ -60,9 +62,7 @@ namespace BotEngine.Bot
         public readonly BacktesterDBContext _backtesterContext;
         public bool _backtest = false;
 
-
         protected Broker _broker = null;
-
         protected IndicatorsEngine _signalsEngine = null;
         public BotParameters _botParameters = null;
         public Score _score = null;
@@ -74,7 +74,6 @@ namespace BotEngine.Bot
 
         public Dictionary<TransactionType, Dictionary<string, Transaction>> _transactionsDict = null;
         public Dictionary<TransactionType, Dictionary<string, Trade>> _tradesDict = null;
-        //public Dictionary<string, Transaction> _transactionsDict = null;
 
         public bool Keepgoin = true;
         public bool StopBuying = false;
@@ -97,10 +96,6 @@ namespace BotEngine.Bot
             _broker = Broker.DecideBroker(brokerDescription);
             _transactionsDict = new Dictionary<TransactionType, Dictionary<string, Transaction>>(); 
             _tradesDict = new Dictionary<TransactionType, Dictionary<string, Trade>>();
-
-
-            //GetTransactionsToBeProcessed(GetTransactionBuyType(), true);
-            //GetTransactionsToBeProcessed(GetTransactionSellType(), true);
 
             if (backtest)
             {
@@ -142,21 +137,16 @@ namespace BotEngine.Bot
         //////////////////////// ABSTRACT FUNCTIONS /////////////////////////
         ///////////////////////////////////////////////////////////////////
 
-        public abstract void CloseTrade(Trade t, Transaction transaction, string description = "");
-        public abstract void CloseTrades(Transaction t, string description = "");
-        public abstract TransactionType GetTransactionBuyType();
-        public abstract TransactionType GetTransactionSellType();
-        public abstract TransactionType GetTransactionBuyCloseType();
-        public abstract TransactionType GetTransactionSellCloseType();
-        public abstract TransactionType GetTransactionBuyDoneType();
-        public abstract void ProcessErrorTrade(Trade t);
-        public abstract void ProcessErrorTransaction(Transaction t);
+        public abstract float CalculateBuyFitness();
+        public abstract bool IsTransactionBuyTypes(TransactionType type);
+        public abstract bool IsTransactionSellTypes(TransactionType type);
+        public abstract TransactionType GetTransactionLongType();
+        public abstract TransactionType GetTransactionShortType();
+        public abstract TransactionType GetTransactionLongCloseType();
+        public abstract TransactionType GetTransactionShortCloseType();
         public abstract void ProcessTransactions();
-        public abstract float ProcessTransaction(Transaction t, Candle lastCandle, ref bool result);
-        public abstract void ProcessLockProfits(Transaction t, Candle lastCandle, float profit);
-        public abstract void ProcessTrailingStop(Transaction t, Candle lastCandle);
-        public abstract void ProcessStopLoss(Transaction t, Candle lastCandle);
-        public abstract void UserOrder(Transaction transaction, UserBotRelation userBotRelation, Candle lastCandle, Candle Buy = null);
+        public abstract int ProcessCloseTransactions(Candle lastCandle, IEnumerable<Transaction> buyTransactions, IEnumerable<Transaction> sellTransactions);
+
 
         ///////////////////////////////////////////////////////////////////
         //////////////////////// PUBLIC FUNCTIONS /////////////////////////
@@ -492,6 +482,537 @@ namespace BotEngine.Bot
             return null;
         }
 
+        public void ProcessTransactions(Candle lastCandle, IEnumerable<Transaction> buyTransactions, IEnumerable<Transaction> sellTransactions)
+        {
+            try
+            {
+                buyFitness = CalculateBuyFitness();
+                if (buyFitness > FitnessLimit)
+                {
+                    if (_botParameters.BotName.Equals("macdcross-ada"))
+                    {
+                        Console.WriteLine("macdcross-ada DEBUG");
+                    }
+                    ProcessTransactions(lastCandle, sellTransactions, TransactionType.buy);
+                }
+                else if (buyFitness < -FitnessLimit)
+                {
+                    if (_botParameters.BotName.Equals("macdcross-ada"))
+                    {
+                        Console.WriteLine("macdcross-ada DEBUG");
+                    }
+                    buyFitness = -buyFitness;
+                    ProcessTransactions(lastCandle, buyTransactions, TransactionType.sell);
+                }
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+        public void ProcessTransactions(Candle lastCandle, IEnumerable<Transaction> transactions, TransactionType transactionType)
+        {
+            if (buyFitness < 1.0f)
+            {
+                buyFitness = 1.0f;
+            }
+
+            buyFitness = MathF.Round(buyFitness);
+            if (!_botParameters.QuickReversal && !_botParameters.SuperReversal)
+            {
+                if (transactions.Any())
+                {
+                    Transaction t = transactions.First();
+                    CloseTrades(t);
+                }
+                else
+                {
+                    StoreOrderTransaction(lastCandle, transactionType, MinimumTransactionAmount * buyFitness);
+                }
+            }
+            else if (_botParameters.QuickReversal)
+            {
+                if (transactions.Any())
+                {
+                    Transaction t = transactions.First();
+                    CloseTrades(t);
+                }
+                StoreOrderTransaction(lastCandle, transactionType, MinimumTransactionAmount * buyFitness);
+            }
+            else if (_botParameters.SuperReversal)
+            {
+                if (transactions.Any())
+                {
+                    int max = transactions.Count();
+                    foreach (Transaction transaction in transactions)
+                    {
+                        CloseTrades(transaction);
+                    }
+                    for (int i = 0; i < max; i++)
+                    {
+                        StoreOrderTransaction(lastCandle, transactionType, MinimumTransactionAmount * buyFitness);
+                    }
+                }
+            }
+        }
+
+        public virtual float ProcessTransaction(Transaction t, Candle lastCandle, ref bool result)
+        {
+            try
+            {
+                float currentProfit = 0.0F;
+                float profit = 0;
+                float fitness = CalculateSellFitness(t, ref profit);
+
+                if (float.IsNaN(profit))
+                {
+                    profit = 0.0f;
+                }
+
+                if (fitness > FitnessLimit)
+                {
+                    CloseTrades(t);
+                    result = true;
+                }
+                else if (fitness < 0) // Stop Loss
+                {
+                    ProcessStopLoss(t, lastCandle);
+                    result = true;
+                }
+                else
+                {
+                    if (_botParameters.TrailingStop)
+                    {
+                        ProcessTrailingStop(t, lastCandle);
+                        result = true;
+                    }
+                    else if (_botParameters.LockProfits)
+                    {
+                        ProcessLockProfits(t, lastCandle, profit);
+                        result = true;
+                    }
+                }
+                currentProfit += profit;
+                return currentProfit;
+            }
+            catch (Exception e)
+            {
+                transactionErrors.Add(t);
+                BotEngine.DebugMessage(e);
+            }
+            return 0;
+        }
+
+        public Transaction StoreSellOrderTransaction(Transaction Buy, Candle SellCandle, string States = "")
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(States))
+                {
+                    States = "";
+                }
+
+                if (Buy.Price == 0)
+                {
+                    BotEngine.DebugMessage("StoreSellTransaction(): BuyCandle null!");
+                    return null;
+                }
+
+                Candle BuyCandle = new Candle();
+                BuyCandle.Close = Buy.Price;
+
+                if (States.Contains("halftransaction"))
+                {
+                    Buy.Amount = Buy.Amount / 2.0f;
+                    Buy.AmountSymbol2 = Buy.AmountSymbol2 / 2.0f;
+                    StoreOrderTransaction(SellCandle, Buy.Type, Buy.Amount, "halftransaction");
+                }
+
+                Transaction t = DecideTransactionType();
+                float spread = BrokerLib.BrokerLib.SPREAD;
+                float oldAmount = 0;
+                float newAmount = 0;
+                t.BuyId = Buy.id;
+
+                if (Buy.Type == TransactionType.buy)
+                {
+                    t.Type = TransactionType.buyclose;
+                    t.Amount = Buy.Amount;// * (SellCandle.Close / BuyCandle.Close);
+                    t.AmountSymbol2 = Buy.AmountSymbol2 * (SellCandle.Close / BuyCandle.Close);
+                    t.AmountSymbol2 -= Buy.AmountSymbol2 * BrokerLib.BrokerLib.FEE;
+                    t.AmountSymbol2 -= Buy.AmountSymbol2 * spread;
+                }
+                else if (Buy.Type == TransactionType.sell)
+                {
+                    t.Type = TransactionType.sellclose;
+                    t.Amount = Buy.Amount;// * (BuyCandle.Close / SellCandle.Close);
+                    t.AmountSymbol2 = Buy.AmountSymbol2 * (BuyCandle.Close / SellCandle.Close);
+                    t.AmountSymbol2 -= Buy.AmountSymbol2 * BrokerLib.BrokerLib.FEE;
+                    t.AmountSymbol2 -= Buy.AmountSymbol2 * spread;
+                }
+                else
+                {
+                    BotEngine.DebugMessage("StoreSellTransaction() : Undefined transaction type.");
+                    return null;
+                }
+
+                oldAmount = Buy.AmountSymbol2;
+                newAmount = t.AmountSymbol2;
+
+                t.States = States;
+                t.Timestamp = SellCandle.Timestamp;
+                t.Market = Buy.Market;
+                t.Price = SellCandle.Close;
+
+                Buy.Type = BrokerLib.BrokerLib.DoneTransactionType(Buy.Type);
+
+                UpdateTransaction(Buy);
+
+                float gainedAmount = newAmount - oldAmount;
+                if (newAmount > oldAmount)
+                {
+                    t.States += ";WIN:" + gainedAmount;
+                    StoreScore(true, gainedAmount);
+                }
+                else
+                {
+                    t.States += ";LOSS:" + gainedAmount;
+                    StoreScore(false, gainedAmount);
+                }
+
+                return StoreTransaction(t);
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+            return null;
+        }
+
+        public Transaction StoreOrderTransaction(Candle Buy, TransactionType transactionType, float quantity, string States = "")
+        {
+            try
+            {
+                if (Buy == null)
+                {
+                    BotEngine.DebugMessage("StoreOrderTransaction(): buy candle is null!");
+                    //lastCandle = gettickerprice;//TODO
+                }
+
+                //quantity = MathF.Round(quantity, 8, MidpointRounding.ToEven);
+                if (string.IsNullOrEmpty(States))
+                {
+                    States = "";
+                }
+
+                Transaction t = DecideTransactionType();
+                //t.BuyPriceId = Buy.id;
+
+                t.Type = transactionType;
+                float stopLossFactor = 0;
+                float takeProfitFactor = 0;
+                if (t.Type == TransactionType.buy)
+                {
+                    stopLossFactor = 1 - _botParameters.Decrease;
+                    takeProfitFactor = 1 + _botParameters.Increase;
+                }
+                else if (t.Type == TransactionType.sell)
+                {
+                    stopLossFactor = 1 + _botParameters.Decrease;
+                    takeProfitFactor = 1 - _botParameters.Increase;
+                }
+                else
+                {
+                    BotEngine.DebugMessage("StoreOrderTransaction() : transaction type is undefined.");
+                    return null;
+                }
+
+                t.Price = Buy.Close;
+                t.StopLoss = Buy.Close * stopLossFactor;
+                t.TakeProfit = Buy.Close * takeProfitFactor;
+
+                t.Amount = quantity;
+                t.AmountSymbol2 = t.Amount * Buy.Close;
+
+                t.States = States;
+
+                t.LastProfitablePrice = _botParameters.InitLastProfitablePrice;
+                t.Timestamp = Buy.Timestamp;
+
+                t = StoreTransaction(t);
+
+                SubscribedUsersOrder(t);
+
+                return t;
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+            return null;
+        }
+
+        public virtual void UserOrder(Transaction transaction, UserBotRelation userBotRelation, Candle lastCandle, Candle Buy = null)
+        {
+            try
+            {
+                if (userBotRelation.IsVirtual)
+                {
+                    return;
+                }
+
+                AccessPoint ap = null;
+
+                foreach (BrokerBDProvider provider in BrokerDBContext.providers)
+                {
+                    using (BrokerDBContext brokerContext = (BrokerDBContext)provider.GetDBContext())
+                    {
+                        ap = brokerContext.AccessPoints.Find(userBotRelation.AccessPointId);
+                    }
+                    if (ap != null)
+                    {
+                        break;
+                    }
+                }
+                if (ap == null)
+                {
+                    BotEngine.DebugMessage("CFDBot::UserOrder(): " + userBotRelation.UserId + " / " + userBotRelation.BotId + " acess point not found.");
+                    return;
+                }
+
+                Equity equity = null;
+
+                using (var context = BrokerDBContext.newDBContext())
+                {
+                    equity = context.Equitys.Find(userBotRelation.EquityId);
+                }
+                if (equity == null)
+                {
+                    BotEngine.DebugMessage("CFDBot::UserOrder(): EquityId " + userBotRelation.EquityId + " not found. userBotRelation botId/userId: " + userBotRelation.BotId + ":" + userBotRelation.UserId);
+                    equity = Equity.Initialize(_broker, ap, _botParameters.Market);
+                    userBotRelation.EquityId = equity.id;
+                    userBotRelation.Update();
+                }
+
+                equity = CalculateEquity(transaction.Type, equity, ap, lastCandle, userBotRelation.DefaultTransactionAmount, Buy);
+
+                if (!CheckEquity(transaction.Type, equity, lastCandle, userBotRelation.DefaultTransactionAmount))
+                {
+                    return;
+                }
+
+                Trade trade = null;
+
+                Retry.Do(() => {
+                    trade = _broker.Order(transaction, ap, userBotRelation.DefaultTransactionAmount);
+                }, TimeSpan.FromSeconds(1));
+
+                if (trade == null)
+                {
+                    tradeErrors.Add(trade);
+                    throw new TradeErrorException("Trade was null...");
+                }
+                StoreTrade(trade);
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e.StackTrace);
+            }
+        }
+
+        public void ProcessLockProfits(Transaction t, Candle lastCandle, float profit)
+        {
+            try
+            {
+                if (profit > _botParameters.Increase / 2.0 && !string.IsNullOrEmpty(t.States) && !t.States.Contains("halftransaction"))
+                {
+                    CloseTrades(t, t.States + ";halftransaction;takeprofit50"); // sell half of the transaction amount, 
+                                                                                // the sell function creates a new transaction and change(divide by 2) the amount of the old transaction
+                }
+                else if (profit > _botParameters.Increase / 10.0)
+                {
+                    if (t.LastProfitablePrice >= 0)
+                    {
+                        bool condition = false;
+                        if (t.Type == TransactionType.buy)
+                        {
+                            condition = lastCandle.Close > t.LastProfitablePrice;
+                        }
+                        else if (t.Type == TransactionType.sell)
+                        {
+                            condition = lastCandle.Close < t.LastProfitablePrice;
+                        }
+                        else
+                        {
+                            BotEngine.DebugMessage(String.Format("CFDBot::ProcessLockProfits() : transactionType not valid."));
+                            return;
+                        }
+
+                        if (condition)
+                        {
+                            t.LastProfitablePrice = lastCandle.Close;
+                            UpdateTransaction(t);
+
+                        }
+                        else
+                        {
+                            CloseTrades(t, t.States + ";lockedremainingprofit");
+                        }
+                    }
+                }
+                else if (profit < -_botParameters.Decrease / 2.0)
+                {
+                    if (t.LastProfitablePrice < 0)
+                    {
+                        t.LastProfitablePrice++;
+                        UpdateTransaction(t);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+        public void ProcessTrailingStop(Transaction t, Candle lastCandle)
+        {
+            try
+            {
+                if (t.Type == TransactionType.buy)
+                {
+                    if (lastCandle.Close > t.LastProfitablePrice || t.LastProfitablePrice <= 0)
+                    {
+                        t.LastProfitablePrice = lastCandle.Close;
+                    }
+                    if (lastCandle.Close <= t.LastProfitablePrice * (1.0f - _botParameters.TrailingStopValue))
+                    {
+                        CloseTrades(t, t.States + ";trailingstop");
+                    }
+                }
+                else if (t.Type == TransactionType.sell)
+                {
+                    if (lastCandle.Close < t.LastProfitablePrice || t.LastProfitablePrice <= 0)
+                    {
+                        t.LastProfitablePrice = lastCandle.Close;
+                    }
+                    if (lastCandle.Close >= t.LastProfitablePrice * (1.0f + _botParameters.TrailingStopValue))
+                    {
+                        CloseTrades(t, t.States + ";trailingstop");
+                    }
+                }
+
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+        public void ProcessStopLoss(Transaction t, Candle lastCandle)
+        {
+            try
+            {
+                if (_botParameters.StopLossMaxAtemptsBeforeStopBuying > 0)
+                {
+                    auxStopAfterStopLossMinutes++;
+                    if (auxStopAfterStopLossMinutes >= _botParameters.StopAfterStopLossMinutes)
+                    {
+                        StopBuying = true;
+                    }
+                }
+                CloseTrades(t, t.States + ";stoploss");
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+        public void CloseTrades(Transaction t, string description = "")
+        {
+            try
+            {
+                if (!_backtest)
+                {
+                    List<Trade> trades = _tradesDict[t.Type].Values.Where(m => m.TransactionId == t.id && m.Type == t.Type).ToList();
+
+                    foreach (Trade trade in trades)
+                    {
+                        CloseTrade(trade, t, description);
+                    }
+                }
+                StoreSellOrderTransaction(t, _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame), description);
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+        public void CloseTrade(Trade trade, Transaction transaction, string description = "")
+        {
+            try
+            {
+                if (!_backtest)
+                {
+                    AccessPoint accessPoint = AccessPoint.Construct(trade.AccessPointId);
+                    if (accessPoint == null || string.IsNullOrEmpty(accessPoint.id))
+                    {
+                        return;
+                    }
+                    Trade closetrade = null;
+                    Retry.Do(() => {
+                        closetrade = _broker.CloseTrade(trade, transaction, accessPoint, description);
+                    }, TimeSpan.FromSeconds(1));
+
+                    if (closetrade == null)
+                    {
+                        tradeErrors.Add(trade);
+                        throw new TradeErrorException("Trade close was null...");
+                    }
+                    StoreTrade(closetrade);
+                    trade.Type = BrokerLib.BrokerLib.DoneTransactionType(trade.Type);
+                    UpdateTrade(trade);
+                }
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+        public void SubscribedUsersOrder(Transaction t)
+        {
+            try
+            {
+                if (!_backtest)
+                {
+                    List<UserBotRelation> userBotRelations = null;
+                    using (BotDBContext botContext = BotDBContext.newDBContextClient())
+                    {
+                        userBotRelations = botContext.UserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
+                    }
+                    Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
+
+                    foreach (UserBotRelation userBotRelation in userBotRelations)
+                    {
+                        if (userBotRelation.IsVirtual)
+                        {
+                            continue;
+                        }
+                        UserOrder(t, userBotRelation, lastCandle);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+
         public Trade StoreTrade(Trade t)
         {
             try
@@ -639,7 +1160,7 @@ namespace BotEngine.Bot
             foreach (var trade in tradeErrors)
             {
                 BotEngine.DebugMessage("Trade Error!");
-                ProcessErrorTrade(trade);
+                //ProcessErrorTrade(trade);
             }
             foreach (var transaction in transactionErrors)
             {
@@ -769,6 +1290,82 @@ namespace BotEngine.Bot
             return null;
         }
 
+        public void ProcessErrorTrade(Trade t)
+        {
+            try
+            {
+                if (!_backtest)
+                {
+                    Transaction transaction = null;
+                    Trade trade = null;
+                    using (BrokerDBContext brokerContext = BrokerDBContext.newDBContextClient())
+                    {
+                        trade = brokerContext.Trades.Find(t.id);
+                        if (trade != null)
+                        {
+                            tradeErrors.Remove(t);
+                            return;
+                        }
+                        transaction = _transactionsDict[t.Type].Values.SingleOrDefault(m => m.id == t.TransactionId);
+                    }
+                    if (IsTransactionBuyTypes(t.Type))
+                    {
+                        UserBotRelation userBotRelation = null;
+                        using (BotDBContext botContext = BotDBContext.newDBContextClient())
+                        {
+                            userBotRelation = botContext.UserBotRelations.SingleOrDefault(m => m.BotId == _botParameters.id);
+                        }
+                        Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
+                        UserOrder(transaction, userBotRelation, lastCandle);
+                    }
+                    else if (IsTransactionSellTypes(t.Type))
+                    {
+                        trade = _tradesDict[t.Type].Values.SingleOrDefault(m => m.TransactionId == t.id && m.Type == t.Type);
+
+                        CloseTrade(trade, transaction, transaction.States + ";ERROR");
+                    }
+                    tradeErrors.Remove(t);
+                }
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
+        public void ProcessErrorTransaction(Transaction t)
+        {
+            try
+            {
+                if (!_backtest)
+                {
+                    Transaction transaction = null;
+                    using (BrokerDBContext brokerContext = BrokerDBContext.newDBContextClient())
+                    {
+                        transaction = brokerContext.Transactions.Find(t.id);
+                        if (transaction != null)
+                        {
+                            transactionErrors.Remove(t);
+                            return;
+                        }
+                    }
+                    if (IsTransactionBuyTypes(t.Type))
+                    {
+                        SubscribedUsersOrder(t);
+                    }
+                    else if (IsTransactionSellTypes(t.Type))
+                    {
+                        CloseTrades(t, t.States + ";ERROR");
+                    }
+                    transactionErrors.Remove(t);
+                }
+            }
+            catch (Exception e)
+            {
+                BotEngine.DebugMessage(e);
+            }
+        }
+
 
         ///////////////////////////////////////////////////////////////////
         //////////////////////// VIRTUAL FUNCTIONS /////////////////////////
@@ -851,13 +1448,13 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (transactionType == GetTransactionBuyType())
+                if (transactionType == GetTransactionLongType() || transactionType == GetTransactionShortType())
                 {
-                    return CalculateBuyEquity(equity, accessPoint, lastCandle, amount);
+                    return CalculateBuyEquity(equity, accessPoint, lastCandle, amount, transactionType);
                 }
-                else if (transactionType == GetTransactionBuyCloseType())
+                else if (transactionType == GetTransactionLongCloseType() || transactionType == GetTransactionShortCloseType())
                 {
-                    return CalculateSellEquity(equity, accessPoint, lastCandle, amount, Buy);
+                    return CalculateSellEquity(equity, accessPoint, lastCandle, amount, Buy, transactionType);
                 }
             }
             catch (Exception e)
@@ -867,7 +1464,7 @@ namespace BotEngine.Bot
             return null;
         }
 
-        public virtual Equity CalculateBuyEquity(Equity equity, AccessPoint accessPoint, Candle lastCandle, float amount)
+        public virtual Equity CalculateBuyEquity(Equity equity, AccessPoint accessPoint, Candle lastCandle, float amount, TransactionType transactionType)
         {
             try
             {
@@ -885,12 +1482,12 @@ namespace BotEngine.Bot
             }
             catch (Exception e)
             {
-                BotEngine.DebugMessage(e.StackTrace);
+                BotEngine.DebugMessage(e);
             }
             return null;
         }
 
-        public virtual Equity CalculateSellEquity(Equity equity, AccessPoint accessPoint, Candle lastCandle, float amount, Candle Buy)
+        public virtual Equity CalculateSellEquity(Equity equity, AccessPoint accessPoint, Candle lastCandle, float amount, Candle Buy, TransactionType transactionType)
         {
             try
             {
@@ -899,7 +1496,15 @@ namespace BotEngine.Bot
                 equity.RealAvailableAmountSymbol1 = _broker.GetCurrencyBalance(accessPoint, _botParameters.Market, lastClose);
                 equity.RealAvailableAmountSymbol2 = _broker.GetCurrencyBalance(accessPoint, _botParameters.Market, lastClose, true);
                 float spread = BrokerLib.BrokerLib.SPREAD;
-                float AmountInSymbol2AfterSell = AmountInSymbol2 * (lastCandle.Close / Buy.Close);
+                float AmountInSymbol2AfterSell = 0;
+                if (transactionType == TransactionType.buyclose)
+                {
+                    AmountInSymbol2AfterSell = AmountInSymbol2 * (lastCandle.Close / Buy.Close);
+                }
+                else if (transactionType == TransactionType.sellclose)
+                {
+                    AmountInSymbol2AfterSell = AmountInSymbol2 * (Buy.Close / lastCandle.Close);
+                }
                 equity.Amount = _broker.GetTotalMarketBalance(accessPoint, _botParameters.Market, lastClose);
                 equity.EquityValue = 0;
                 equity.VirtualBalance += AmountInSymbol2AfterSell * (1 - (BrokerLib.BrokerLib.FEE + spread));
@@ -909,7 +1514,7 @@ namespace BotEngine.Bot
             }
             catch (Exception e)
             {
-                BotEngine.DebugMessage(e.StackTrace);
+                BotEngine.DebugMessage(e);
             }
             return null;
         }
@@ -1011,7 +1616,14 @@ namespace BotEngine.Bot
                     else if (botParameters.BrokerType.Equals(BrokerType.margin))
                     {
                         return new CFDBot(botParameters);
-
+                    }
+                    else if (botParameters.BrokerType.Equals(BrokerType.exchange_dev))
+                    {
+                        return new ExchangeBot(botParameters);
+                    }
+                    else if (botParameters.BrokerType.Equals(BrokerType.margin_dev))
+                    {
+                        return new MarginBot(botParameters);
                     }
                 }
                 else if (botParameters.BrokerId == Brokers.OANDA)

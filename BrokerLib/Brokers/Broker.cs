@@ -597,7 +597,7 @@ namespace BrokerLib.Brokers
                 Broker broker = null;
                 if (brokerDescription.BrokerId.Equals(BrokerLib.Brokers.OANDA))
                 {
-                    if (brokerDescription.BrokerType.Equals(BrokerType.margin))
+                    if (brokerDescription.BrokerType.Equals(BrokerType.margin) || brokerDescription.BrokerType.Equals(BrokerType.margin_dev))
                     {
                         broker = new OANDA();
                     }
@@ -608,11 +608,11 @@ namespace BrokerLib.Brokers
                 }
                 else if (brokerDescription.BrokerId.Equals(BrokerLib.Brokers.HitBTC))
                 {
-                    if (brokerDescription.BrokerType.Equals(BrokerType.exchange))
+                    if (brokerDescription.BrokerType.Equals(BrokerType.exchange) || brokerDescription.BrokerType.Equals(BrokerType.exchange_dev))
                     {
                         broker = new HitBTC();
                     }
-                    else if (brokerDescription.BrokerType.Equals(BrokerType.margin))
+                    else if (brokerDescription.BrokerType.Equals(BrokerType.margin) || brokerDescription.BrokerType.Equals(BrokerType.margin_dev))
                     {
                         broker = new HitBTC(true);
                     }

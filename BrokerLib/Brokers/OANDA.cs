@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using BrokerLib.Models;
 using static BrokerLib.BrokerLib;
 using BrokerLib.Market;
+using BrokerLib.Exceptions;
 
 namespace BrokerLib.Brokers
 {
@@ -61,14 +62,34 @@ namespace BrokerLib.Brokers
 
     }
 
+    public class OrderCloseModel
+    {
+        public string price { get; set; }
+        public string timeInForce { get; set; }
+        public string instrument { get; set; }
+        public string units { get; set; }
+        public string type { get; set; }
+        public string positionFill { get; set; }
+
+        public OrderCloseModel(string units, string type, string instrument, string positionFill, string price, string timeInForce)
+        {
+            this.price = price;
+            this.timeInForce = timeInForce;
+            this.instrument = instrument;
+            this.units = units;
+            this.type = type;
+            this.positionFill = positionFill;
+        }
+    }
+
     public class OrderClose : Parser
     {
-        public string units { get; set; }
+        public OrderCloseModel order { get; set; }
 
-        public OrderClose(string units)
+        public OrderClose(string units, string type, string instrument, string positionFill, string price, string timeInForce)
         : base()
         {
-            this.units = units;
+            order = new OrderCloseModel(units, type, instrument, positionFill, price, timeInForce);
         }
     }
 
@@ -229,7 +250,19 @@ namespace BrokerLib.Brokers
                 {
                     amount = -amount;
                 }
-                Order order = new Order(amount.ToString(nfi), "MARKET", ParseMarket(transaction.Market), "DEFAULT", null, transaction.StopLoss.ToString(nfi), transaction.TakeProfit.ToString(nfi), null);
+                Parser order = null;
+                if (transaction.Type == TransactionType.sell || transaction.Type == TransactionType.buy)
+                {
+                    order = new Order(amount.ToString(nfi), "MARKET", ParseMarket(transaction.Market), "DEFAULT", null, transaction.StopLoss.ToString(nfi), transaction.TakeProfit.ToString(nfi), null);
+                }
+                else if (transaction.Type == TransactionType.sellclose || transaction.Type == TransactionType.buyclose)
+                {
+                    order = new OrderClose(amount.ToString(nfi), "MARKET", ParseMarket(transaction.Market), "DEFAULT", null, null);
+                }
+                else
+                {
+                    throw new TradeErrorException("OANDA::Order() : Trade error: Invalid transaction type, done transactions should not be processed.");
+                }
                 string url = _url + "accounts/" + accessPoint.Account + "/orders";
                 string orderTxt = order.Parse();
                 Console.WriteLine("########ORDERBEGIN########");
@@ -241,28 +274,38 @@ namespace BrokerLib.Brokers
                 dynamic orderFillTransaction = responseObj.orderFillTransaction;
                 dynamic orderCancelTransaction = responseObj.orderCancelTransaction;
                 dynamic errorMessage = responseObj.errorMessage;
-
+                dynamic tradeID = null; 
                 if (errorMessage != null)
                 {
-                    BrokerLib.DebugMessage(String.Format("OANDA::Order() : Trade error: {0}", errorMessage));
-                    return null;
+                    throw new TradeErrorException(String.Format("OANDA::Order() : Trade error: {0}", errorMessage));
                 }
-                if (orderCancelTransaction != null)
+                else if (orderCancelTransaction != null)
                 {
-                    BrokerLib.DebugMessage(String.Format("OANDA::Order() : Trade cancelled, reason: {0}", orderCancelTransaction.reason));
-                    return null;
+                    throw new TradeErrorException(String.Format("OANDA::Order() : Trade cancelled, reason: {0}", orderCancelTransaction.reason));
                 }
-                if (orderFillTransaction == null || orderFillTransaction.tradeOpened == null)
+                else if (orderFillTransaction == null || orderFillTransaction.tradeOpened == null)
                 {
-                    orderFillTransaction.tradeOpened.tradeID = orderFillTransaction.id;
-                    BrokerLib.DebugMessage(String.Format("OANDA::Order() : Trade cancelled, reason: {0}", "orderFillTransaction was null!"));
-                    return null;
+                    if (orderFillTransaction.tradeOpened != null)
+                    {
+                        tradeID = orderFillTransaction.tradeOpened.tradeID;
+                    }
+                    else if (orderFillTransaction.tradesClosed != null)
+                    {
+                        foreach (var item in orderFillTransaction.tradesClosed)
+                        {
+                            tradeID = item.tradeID;
+                        }
+                    }
+                    else 
+                    {
+                        throw new TradeErrorException(String.Format("OANDA::Order() : Trade cancelled, reason: {0}", "orderFillTransaction was null!"));
+                    }
                 }
                 Trade trade = new Trade(accessPoint.id,
                                         transaction.id,
-                                        Convert.ToString(orderFillTransaction.tradeOpened.tradeID),
-                                        Convert.ToSingle(orderFillTransaction.units),
-                                        Convert.ToSingle(orderFillTransaction.price),
+                                        Convert.ToString((string) tradeID),
+                                        Convert.ToSingle((float) orderFillTransaction.units),
+                                        Convert.ToSingle((float) orderFillTransaction.price),
                                         transaction.Market,
                                         transaction.Type);
                 //trade.Store();
@@ -307,72 +350,67 @@ namespace BrokerLib.Brokers
 
         public override Trade CloseTrade(Trade trade, Transaction transaction, AccessPoint accessPoint, string description = "")
         {
-            try
+            //OrderClose orderClose = new OrderClose(Math.Abs(trade.Amount).ToString());
+            //string url = _url + "accounts/" + accessPoint.Account + "/trades/" + trade.BrokerTransactionId + "/close";
+            //string orderCloseTxt = orderClose.Parse();
+            //Console.WriteLine("####### ORDER CLOSE BEGIN ######");
+            //Console.WriteLine("AcessPointID: " + accessPoint.id);
+            //Console.WriteLine(orderCloseTxt);
+            //Console.WriteLine("####### ORDER CLOSE END ########");
+            //string response = Request.Put(url, accessPoint.BearerToken, orderCloseTxt, "application/json", AuthTypes.BearerToken);
+            //dynamic responseObj = JsonConvert.DeserializeObject(response);
+            //dynamic orderFillTransaction = responseObj.orderFillTransaction;
+            //dynamic orderCancelTransaction = responseObj.orderCancelTransaction;
+            //dynamic orderRejectTransaction = responseObj.orderRejectTransaction;
+            //dynamic errorMessage = responseObj.errorMessage;
+
+            //if (errorMessage != null)
+            //{
+            //    BrokerLib.DebugMessage(String.Format("OANDA::CloseTrade() : Trade error: {0}", errorMessage));
+            //    return 0;
+            //}
+            //if (orderCancelTransaction != null)
+            //{
+            //    BrokerLib.DebugMessage(String.Format("OANDA::CloseTrade() : Trade cancelled, reason: {0}", orderCancelTransaction.reason));
+            //    return 0;
+            //}
+            //if (orderRejectTransaction != null)
+            //{
+            //    BrokerLib.DebugMessage(String.Format("OANDA::CloseTrade() : Trade rejected, reason: {0}", orderRejectTransaction.reason));
+            //    return 0;
+            //}
+
+            //trade.Type = BrokerLib.CloseTransactionType(trade.Type);
+            //trade.Update();
+
+            //Trade closetrade = new Trade(accessPoint.id,
+            //                        transaction.id,
+            //                        Convert.ToString(orderFillTransaction.orderID),
+            //                        Convert.ToSingle(orderFillTransaction.units),
+            //                        Convert.ToSingle(orderFillTransaction.price),
+            //                        transaction.Market,
+            //                        BrokerLib.CloseTransactionType(transaction.Type),
+            //                        trade.id);
+
+            //closetrade.Store();
+
+            //float profit = (float) responseObj.orderFillTransaction.pl;
+
+            //return profit;
+
+            TransactionType transactionType = transaction.Type;
+            TransactionType tradeTansactionType = BrokerLib.CloseTransactionType(transaction.Type);
+
+            transaction.Type = tradeTansactionType;
+
+            Trade closetrade = Order(transaction, accessPoint, trade.Amount);
+            if (closetrade == null)
             {
-                //OrderClose orderClose = new OrderClose(Math.Abs(trade.Amount).ToString());
-                //string url = _url + "accounts/" + accessPoint.Account + "/trades/" + trade.BrokerTransactionId + "/close";
-                //string orderCloseTxt = orderClose.Parse();
-                //Console.WriteLine("####### ORDER CLOSE BEGIN ######");
-                //Console.WriteLine("AcessPointID: " + accessPoint.id);
-                //Console.WriteLine(orderCloseTxt);
-                //Console.WriteLine("####### ORDER CLOSE END ########");
-                //string response = Request.Put(url, accessPoint.BearerToken, orderCloseTxt, "application/json", AuthTypes.BearerToken);
-                //dynamic responseObj = JsonConvert.DeserializeObject(response);
-                //dynamic orderFillTransaction = responseObj.orderFillTransaction;
-                //dynamic orderCancelTransaction = responseObj.orderCancelTransaction;
-                //dynamic orderRejectTransaction = responseObj.orderRejectTransaction;
-                //dynamic errorMessage = responseObj.errorMessage;
-
-                //if (errorMessage != null)
-                //{
-                //    BrokerLib.DebugMessage(String.Format("OANDA::CloseTrade() : Trade error: {0}", errorMessage));
-                //    return 0;
-                //}
-                //if (orderCancelTransaction != null)
-                //{
-                //    BrokerLib.DebugMessage(String.Format("OANDA::CloseTrade() : Trade cancelled, reason: {0}", orderCancelTransaction.reason));
-                //    return 0;
-                //}
-                //if (orderRejectTransaction != null)
-                //{
-                //    BrokerLib.DebugMessage(String.Format("OANDA::CloseTrade() : Trade rejected, reason: {0}", orderRejectTransaction.reason));
-                //    return 0;
-                //}
-
-                //trade.Type = BrokerLib.CloseTransactionType(trade.Type);
-                //trade.Update();
-
-                //Trade closetrade = new Trade(accessPoint.id,
-                //                        transaction.id,
-                //                        Convert.ToString(orderFillTransaction.orderID),
-                //                        Convert.ToSingle(orderFillTransaction.units),
-                //                        Convert.ToSingle(orderFillTransaction.price),
-                //                        transaction.Market,
-                //                        BrokerLib.CloseTransactionType(transaction.Type),
-                //                        trade.id);
-
-                //closetrade.Store();
-
-                //float profit = (float) responseObj.orderFillTransaction.pl;
-
-                //return profit;
-
-                TransactionType transactionType = transaction.Type;
-                TransactionType tradeTansactionType = BrokerLib.CloseTransactionType(transaction.Type);
-
-                transaction.Type = tradeTansactionType;
-
-                Trade closetrade = Order(transaction, accessPoint, trade.Amount);
-
-                transaction.Type = BrokerLib.OppositeTransactionType(transaction.Type);
-
-                return closetrade;
+                int idebug = 0;
             }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
+            transaction.Type = BrokerLib.OppositeTransactionType(transaction.Type);
+
+            return closetrade;
         }
 
 

@@ -257,7 +257,6 @@ namespace BotEngine
                             {
                                 if (!processedIndicatorsEngines.Contains(bot._signalsEngineId + ":" + timeFrame))
                                 {
-                                    DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} UPDAING {2}...", timeFrame, bot._signalsEngineId, iteration));
                                     _signalsEngineDict[bot._signalsEngineId].UpdateIndicators(timeFrame);
                                     DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} UPDADE COMPLETE {2}!", timeFrame, bot._signalsEngineId, iteration));
                                     processedIndicatorsEngines.Add(bot._signalsEngineId + ":" + timeFrame);
@@ -401,18 +400,6 @@ namespace BotEngine
                 //compare intended value with value from api, if not sufficient throw an error
 
                 Equity equity = Equity.Initialize(broker, ap, bot._botParameters.Market);
-                //context.Equitys.Add(equity);
-                //context.SaveChanges();
-
-                Score score = new Score();
-                score.Positions = 0;
-                score.BotParametersId = bot._botParameters.id;
-                score.Successes = 0;
-                score.ActiveTransactions = 0;
-                score.CurrentProfit = 0.0f;
-                score.MaxDrawBack = 0.0f;
-                score.Store();
-
                 userBotRelation.EquityId = equity.id;
                 userBotRelation.Store();
             }
@@ -427,7 +414,7 @@ namespace BotEngine
             try
             {
                 List<BotParametersChanges> botParametersChanges;
-                using (var contextClient = BotDBContext.newDBContextClient())
+                using (var contextClient = BotDBContext.newDBContext())
                 {
                     botParametersChanges = contextClient.BotParametersChanges.ToList(); ;
                 }
@@ -561,7 +548,7 @@ namespace BotEngine
 
                 //}
 
-                DebugMessage(String.Format("Print iteration: {0}", botEngine.iterationPrint++));
+                DebugMessage(String.Format("Print iteration: {0} / {1}", botEngine.iterationPrint++, DateTime.UtcNow));
 
                 DebugMessage("############################################################");
                 //_botContext.SaveChanges();

@@ -75,11 +75,11 @@ namespace SignalsEngine
                 }
                 Candle candleLast = indicator.GetLastValue("middle");
                 Candle candlePedriod = indicator.ValueAt(idxPeriod, "middle");
-                float mom = candleLast.Close - candlePedriod.Close;
+                float mom = candleLast.Close * 100.0f / candlePedriod.Close;
                 AddLastClose(mom, indicator.GetLastTimestamp());
                 return true;
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 SignalsEngine.DebugMessage(e);
             }

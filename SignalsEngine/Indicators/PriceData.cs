@@ -118,44 +118,36 @@ namespace SignalsEngine.Indicators
 
         public override bool CalculateNext(Indicator indicator)
         {
-            try
+            List<Candle> candlesListShared = GetLastCandles(TimeFrame, 1);
+            if (candlesListShared == null || candlesListShared.Count == 0)
             {
-                List<Candle> candlesListShared = GetLastCandles(TimeFrame, 1);
-                if (candlesListShared == null)
+                SignalsEngine.DebugMessage(String.Format("PriceData::CalculateNext({0}) : candlesListShared is null or empty!", ShortName));
+                return false;
+            }
+            foreach (Candle lastCandle in candlesListShared)
+            {
+                Candle _lastCandle = GetLastValue("middle");
+
+                if (_lastCandle != null && lastCandle.Timestamp <= _lastCandle.Timestamp)
                 {
-                    SignalsEngine.DebugMessage(String.Format("PriceData::CalculateNext({0}) : candlesListShared is null!", ShortName));
+                    SignalsEngine.DebugMessage(String.Format("PriceData::CalculateNext({0},{1},{2}) : lastCandle {3} is lesser or iqual than last saved candle {4}.",
+                                                string.IsNullOrEmpty(_lastCandle.Symbol) ? (string.IsNullOrEmpty(lastCandle.Symbol) ? MarketInfo.GetMarket() : lastCandle.Symbol) : _lastCandle.Symbol,
+                                                _lastCandle.TimeFrame,
+                                                ShortName,
+                                                lastCandle.Timestamp,
+                                                _lastCandle.Timestamp));
                     return false;
                 }
-                foreach (Candle lastCandle in candlesListShared)
-                {
-                    Candle _lastCandle = GetLastValue("middle");
+                AddLastValue(lastCandle);
+                lastCandle.Store();
 
-                    if (_lastCandle != null && lastCandle.Timestamp <= _lastCandle.Timestamp)
-                    {
-                        SignalsEngine.DebugMessage(String.Format("PriceData::CalculateNext({0},{1},{2}) : lastCandle {3} is lesser or iqual than last saved candle {4}.",
-                                                    string.IsNullOrEmpty(_lastCandle.Symbol) ? (string.IsNullOrEmpty(lastCandle.Symbol) ? MarketInfo.GetMarket() : lastCandle.Symbol) : _lastCandle.Symbol,
-                                                    _lastCandle.TimeFrame,
-                                                    ShortName,
-                                                    lastCandle.Timestamp,
-                                                    _lastCandle.Timestamp));
-                        return false;
-                    }
-                    AddLastValue(lastCandle);
-                    lastCandle.Store();
-
-                }
-                _currentCandle = GetLastValueNode();
-                _currentIdx = Count();
-
-                _timeSeriesDay.CalculateNext(this);
-
-                return true;
             }
-            catch (Exception e)
-            {
-                SignalsEngine.DebugMessage(e);
-            }
-            return false;
+            _currentCandle = GetLastValueNode();
+            _currentIdx = Count();
+
+            _timeSeriesDay.CalculateNext(this);
+
+            return true;
         }
 
         ///////////////////////////////////////////////////////

@@ -2,6 +2,7 @@
 using BrokerLib.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilsLib.Utils;
@@ -467,14 +468,31 @@ namespace SignalsEngine.Indicators
                     bool success = false;
                     for (int retry = 0; retry < retries; retry++)
                     {
-                        if (timeSeries.CalculateNext(null))
+                        try
                         {
-                            success = true;
-                            break;
+                            if (timeSeries.CalculateNext(null))
+                            {
+                                success = true;
+                                DebugMessage(String.Format("UpdateIndicators({0}, {1}, {2}): Success fetching next candle! {3}", _brokerId.ToString(), _marketInfo.GetMarket(), timeFrame, timeSeries.GetLastTimestamp()));
+                                break;
+                            }
+                            else
+                            {
+                                DebugMessage(String.Format("UpdateIndicators({0}, {1}, {2}): Getting last candle failed! Retry {2}", _brokerId.ToString(), _marketInfo.GetMarket(), retry + 1, timeFrame));
+                                if (retry == retries - 1)
+                                {
+                                    return;
+                                }
+                                Thread.Sleep(1000);
+                            }
                         }
-                        else
+                        catch (Exception)
                         {
-                            DebugMessage(String.Format("UpdateIndicators({0}, {1}): Getting last candle failed! Retry {2}", _brokerId.ToString(), _marketInfo.GetMarket(), retry + 1));
+                            DebugMessage(String.Format("UpdateIndicators({0}, {1}, {2}): Getting last candle failed! Retry {2} Exception!", _brokerId.ToString(), _marketInfo.GetMarket(), retry + 1, timeFrame));
+                            if (retry == retries - 1)
+                            {
+                                return;
+                            }
                             Thread.Sleep(1000);
                         }
                     }
@@ -482,38 +500,49 @@ namespace SignalsEngine.Indicators
                     if (success)
                     {
                         Dictionary<string, Indicator> indicators = IndicatorsSharedData.Instance.GetIndicators(_marketInfo.GetMarketDescription(), timeFrame);
-
-                        Task[] loadingTaks = new Task[indicators.Count];
+                        var level0Indicators = indicators.Where(i => i.Value.InputName == PriceData.NAME && i.Value.ShortName != PriceData.NAME);
+                        var level1Indicators = indicators.Where(i => i.Value.InputName != PriceData.NAME && i.Value.ShortName != PriceData.NAME);
+                        Task[] level0LoadingTaks = new Task[level0Indicators.Count()];
+                        Task[] level1LoadingTaks = new Task[level1Indicators.Count()];
                         int i = 0;
 
-                        foreach (var pair in indicators)
+                        foreach (var pair in level0Indicators)
                         {
-                            loadingTaks[i++] = Task.Run(() =>
+                            level0LoadingTaks[i++] = Task.Run(() =>
                             {
                                 if (_backtest)
                                 {
                                     pair.Value.Store = false;
                                 }
-                                if (pair.Value.ShortName.Equals(PriceData.NAME))
-                                {
-                                    return; ;
-                                    //i.Value.CalculateNext(null);
-                                }
-                                if (pair.Value.InputName.Equals(PriceData.NAME))
-                                {
-                                    pair.Value.CalculateNext(timeSeries);
-                                }
-                                else
-                                {
-                                    Indicator indicator = IndicatorsSharedData.Instance.GetIndicator(_marketInfo.GetMarketDescription(), pair.Value.InputName, timeFrame);
-                                    pair.Value.CalculateNext(indicator);
-                                }
+                                pair.Value.CalculateNext(timeSeries);
                             });
                         }
 
-                        Task.WaitAll(loadingTaks);
+                        Task.WaitAll(level0LoadingTaks);
 
-                        foreach (var task in loadingTaks)
+                        foreach (var task in level0LoadingTaks)
+                        {
+                            task.Dispose();
+                        }
+
+                        i = 0;
+
+                        foreach (var pair in level1Indicators)
+                        {
+                            level1LoadingTaks[i++] = Task.Run(() =>
+                            {
+                                if (_backtest)
+                                {
+                                    pair.Value.Store = false;
+                                }
+                                Indicator indicator = IndicatorsSharedData.Instance.GetIndicator(_marketInfo.GetMarketDescription(), pair.Value.InputName, timeFrame);
+                                pair.Value.CalculateNext(indicator);
+                            });
+                        }
+
+                        Task.WaitAll(level1LoadingTaks);
+
+                        foreach (var task in level1LoadingTaks)
                         {
                             task.Dispose();
                         }

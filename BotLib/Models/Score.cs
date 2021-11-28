@@ -37,10 +37,9 @@ namespace BotLib.Models
             float Score2 = Sigmoid2(AmountGainedDaily, 1);
             float Score3 = Sigmoid2(AmountGained, 0.1f);
             float Score4 = Sigmoid2(CurrentProfit, 1);
+            float Score5 = Sigmoid2(AmountGained / -MaxDrawBack, 1);
 
             float DeScore1 = Sigmoid2(ActiveTransactions, 0.01f);
-
-            float FinalScore = 0;
 
             if (float.IsNaN(Score1))
             {
@@ -59,12 +58,16 @@ namespace BotLib.Models
             {
                 Score4 = 0;
             }
+            else if (float.IsNaN(Score5))
+            {
+                Score5 = 0;
+            }
             else if (float.IsNaN(DeScore1))
             {
                 DeScore1 = 0;
             }
 
-            FinalScore = Score1 * 0.01f + Score2 * 0.5f + Score3 * 0.5f  + Score4 * 0.3f - DeScore1*0.1f;
+            float FinalScore = Score1 * 0.01f + Score2 * 0.5f + Score3 * 0.5f  + Score4 * 0.3f + Score5 * 0.5f - DeScore1 * 0.1f;
 
             return FinalScore;
         }

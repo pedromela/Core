@@ -19,31 +19,35 @@ namespace BotEngine.Bot
 
         }
 
-        public override TransactionType GetTransactionBuyType() 
+        public override bool IsTransactionBuyTypes(TransactionType type)
+        {
+            return type == TransactionType.buy;
+        }
+
+        public override bool IsTransactionSellTypes(TransactionType type)
+        {
+            return type == TransactionType.buyclose;
+        }
+
+        public override TransactionType GetTransactionLongType() 
         {
             return _botParameters.InvertBaseCurrency ? TransactionType.sell : TransactionType.buy;
         }
 
-        public override TransactionType GetTransactionSellType()
+        public override TransactionType GetTransactionShortType()
         {
             return _botParameters.InvertBaseCurrency ? TransactionType.buy : TransactionType.sell;
         }
 
-        public override TransactionType GetTransactionBuyCloseType()
+        public override TransactionType GetTransactionLongCloseType()
         {
             return _botParameters.InvertBaseCurrency ? TransactionType.sellclose : TransactionType.buyclose;
         }
 
-        public override TransactionType GetTransactionSellCloseType()
+        public override TransactionType GetTransactionShortCloseType()
         {
             return _botParameters.InvertBaseCurrency ? TransactionType.buyclose : TransactionType.sellclose;
         }
-
-        public override TransactionType GetTransactionBuyDoneType()
-        {
-            return _botParameters.InvertBaseCurrency ? TransactionType.buydone: TransactionType.selldone;
-        }
-       
 
         public override void ProcessTransactions()
         {
@@ -53,7 +57,7 @@ namespace BotEngine.Bot
                 {
                     ProcessErrors();
                     DrasticChanges();
-                    if (ProcessSellTransactions() == 0)
+                    if (ProcessCloseTransactions() == 0)
                     {
                         if (StopBuying)
                         {
@@ -84,7 +88,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                buyFitness = CalculateBuyFitness(GetTransactionBuyType());
+                buyFitness = CalculateBuyFitness(GetTransactionLongType());
                 if (buyFitness > FitnessLimit)
                 {
                     if (buyFitness < 1.0f)
@@ -110,13 +114,13 @@ namespace BotEngine.Bot
             }
         }
 
-        public int ProcessSellTransactions()
+        public int ProcessCloseTransactions()
         {
             try
             {
                 if (_signalsEngine == null)
                 {
-                    BotEngine.DebugMessage("ProcessSellTransactions(): signalEngine missing!");
+                    BotEngine.DebugMessage("ProcessCloseTransactions(): signalEngine missing!");
                     return 0;
                 }
                 Candle lastCandle = _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame);
@@ -127,7 +131,7 @@ namespace BotEngine.Bot
                         ProcessSmartSellTransactions(lastCandle);
                     }
                     int countSells = 0;
-                    CurrentProfits currentProfits = GetAllProfits(lastCandle, ref countSells, GetTransactionBuyType());
+                    CurrentProfits currentProfits = GetAllProfits(lastCandle, ref countSells, GetTransactionLongType());
                     StoreScore(true, 0.0f, true, currentProfits);
                     return countSells;
                 }
@@ -145,7 +149,7 @@ namespace BotEngine.Bot
             {
                 if (_signalsEngine == null)
                 {
-                    BotEngine.DebugMessage("ProcessSellTransactions(): signalEngine missing!");
+                    BotEngine.DebugMessage("ProcessCloseTransactions(): signalEngine missing!");
                     return;
                 }
                 Candle lastCandle = _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame);
@@ -197,7 +201,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (smartTransaction.Type == GetTransactionBuyType() || smartTransaction.Type == GetTransactionSellCloseType())
+                if (smartTransaction.Type == GetTransactionLongType() || smartTransaction.Type == GetTransactionShortCloseType())
                 {
                     if (lastCandle.Close > smartTransaction.PriceAtCreation * (1 + _botParameters.UpPercentage) || smartTransaction.Count > _botParameters.StopAfterStopLossMinutes)
                     {
@@ -212,7 +216,7 @@ namespace BotEngine.Bot
                         smartTransaction.PriceAtCreation = lastCandle.Close;
                     }
                 }
-                else if (smartTransaction.Type == GetTransactionSellType() || smartTransaction.Type == GetTransactionBuyCloseType())
+                else if (smartTransaction.Type == GetTransactionShortType() || smartTransaction.Type == GetTransactionLongCloseType())
                 {
                     if (lastCandle.Close < smartTransaction.PriceAtCreation * (1 - _botParameters.DownPercentage) || smartTransaction.Count > _botParameters.StopAfterStopLossMinutes)
                     {
@@ -281,7 +285,7 @@ namespace BotEngine.Bot
 
         public void SmartBuy(Candle last, float quantity)
         {
-            smartBuyTransactions.Add(new SmartTransaction(last.Close, null, GetTransactionBuyType(), quantity));
+            smartBuyTransactions.Add(new SmartTransaction(last.Close, null, GetTransactionLongType(), quantity));
         }
 
         public void BuyQueue(Candle last, float quantity)
@@ -325,7 +329,7 @@ namespace BotEngine.Bot
         public void SmartSell(Transaction Buy, Candle LastCandle)
         {
             Buy.Type = TransactionType.smartsell;
-            smartSellTransactions.Add(new SmartTransaction(LastCandle.Close, Buy, GetTransactionBuyCloseType()));
+            smartSellTransactions.Add(new SmartTransaction(LastCandle.Close, Buy, GetTransactionLongCloseType()));
             UpdateTransaction(Buy);
         }
 
@@ -476,7 +480,7 @@ namespace BotEngine.Bot
                 t.States = States;
 
                 t.LastProfitablePrice = _botParameters.InitLastProfitablePrice;
-                t.Type = GetTransactionBuyType();
+                t.Type = GetTransactionLongType();
                 t.Timestamp = Buy.Timestamp;
 
                 SubscribedUsersBuy(t);
@@ -527,7 +531,7 @@ namespace BotEngine.Bot
                 t.AmountSymbol2 -= Buy.AmountSymbol2 * BrokerLib.BrokerLib.FEE;
                 t.AmountSymbol2 -= Buy.AmountSymbol2 * spread;
                 t.States = States;
-                t.Type = GetTransactionBuyCloseType();
+                t.Type = GetTransactionLongCloseType();
                 t.Timestamp = SellCandle.Timestamp;
                 t.Price = SellCandle.Close;
 
@@ -547,7 +551,7 @@ namespace BotEngine.Bot
 
                 SubscribedUsersSell(Buy, BuyCandle);
 
-                Buy.Type = GetTransactionBuyDoneType();
+                Buy.Type = BrokerLib.BrokerLib.DoneTransactionType(Buy.Type);
 
                 UpdateTransaction(Buy);
 
@@ -564,140 +568,6 @@ namespace BotEngine.Bot
         {
             StopBuying = false;
             auxStopAfterStopLossMinutes = 0;
-        }
-
-        public override void ProcessLockProfits(Transaction t, Candle lastCandle, float profit) 
-        {
-            try
-            {
-                if (profit > _botParameters.Increase / 2.0 && !string.IsNullOrEmpty(t.States) && !t.States.Contains("halftransaction"))
-                {
-                    Sell(t, lastCandle, t.States + ";halftransaction;takeprofit50"); // sell half of the transaction amount, 
-                                                                                     // the sell function creates a new transaction and change(divide by 2) the amount of the old transaction
-                }
-                else if (profit > _botParameters.Increase / 10.0)
-                {
-                    if (t.LastProfitablePrice >= 0)
-                    {
-                        if (lastCandle.Close > t.LastProfitablePrice)
-                        {
-                            t.LastProfitablePrice = lastCandle.Close;
-                            UpdateTransaction(t);
-                        }
-                        else
-                        {
-                            Sell(t, lastCandle, t.States + ";lockedremainingprofit");
-                        }
-                    }
-                }
-                else if (profit < -_botParameters.Decrease / 2.0)
-                {
-                    if (t.LastProfitablePrice < 0)
-                    {
-                        t.LastProfitablePrice++;
-                        UpdateTransaction(t);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
-        }
-
-        public override void ProcessTrailingStop(Transaction t, Candle lastCandle)
-        {
-            try
-            {
-                if (lastCandle.Close > t.LastProfitablePrice || t.LastProfitablePrice <= 0)
-                {
-                    t.LastProfitablePrice = lastCandle.Close;
-                }
-
-                if (lastCandle.Close <= t.LastProfitablePrice * (1.0f - _botParameters.TrailingStopValue))
-                {
-                    Sell(t, lastCandle, t.States + ";trailingstop");
-                }
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
-        }
-
-        public override void ProcessStopLoss(Transaction t, Candle lastCandle)
-        {
-            try
-            {
-                if (_botParameters.StopLossMaxAtemptsBeforeStopBuying > 0)
-                {
-                    auxStopAfterStopLossMinutes++;
-                    if (auxStopAfterStopLossMinutes >= _botParameters.StopAfterStopLossMinutes)
-                    {
-                        StopBuying = true;
-                        //TaskScheduler.Instance.ScheduleTaskOnlyOnce(StartBuying, StopAfterStopLossMinutes, 0);
-                    }
-                }
-                Sell(t, lastCandle, t.States + ";stoploss");
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
-        }
-
-        public override void ProcessErrorTrade(Trade t)
-        {
-            try
-            {
-                if (!_backtest)
-                {
-                    if (t.Type == GetTransactionBuyType())
-                    {
-                        //UserOrder(t, userBotRelation, lastCandle);
-                    }
-                    else if (t.Type == GetTransactionBuyCloseType())
-                    {
-                        //ProcessTransaction(t, lastCandle, ref result);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
-        }
-
-        public override void ProcessErrorTransaction(Transaction t)
-        {
-            try
-            {
-                if (_backtest)
-                {
-                    //Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
-                    //if (t.Type == GetTransactionBuyType() || t.Type == GetTransactionSellType())
-                    //{
-                    //    SubscribedUsersOrder(t);
-                    //}
-                    //else if (t.Type == GetTransactionBuyCloseType() || t.Type == GetTransactionSellCloseType())
-                    //{
-                    //    CloseTrades(t, "ERROR");
-                    //}
-                    //if (t.Type == GetTransactionBuyType())
-                    //{
-                    //    Buy(lastCandle, MinimumTransactionAmount);
-                    //}
-                    //else if (t.Type == GetTransactionBuyCloseType())
-                    //{
-                    //    ProcessTransaction(t, lastCandle, ref result);
-                    //}
-                    //transactionErrors.Remove(t);
-                }
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
         }
 
         public override float ProcessTransaction(Transaction t, Candle lastCandle, ref bool result)
@@ -776,12 +646,12 @@ namespace BotEngine.Bot
             return null;
         }
 
-        public override void CloseTrade(Trade t, Transaction transaction, string description = "")
+        public override float CalculateBuyFitness()
         {
             throw new NotImplementedException();
         }
 
-        public override void CloseTrades(Transaction t, string description = "")
+        public override int ProcessCloseTransactions(Candle lastCandle, IEnumerable<Transaction> buyTransactions, IEnumerable<Transaction> sellTransactions)
         {
             throw new NotImplementedException();
         }

@@ -92,11 +92,11 @@ namespace BotEngine
                         }
                         else
                         {
-                            BotParameters botParameters = _botRanking.KillWorstBot();
-                            if (botParameters != null)
-                            {
-                                botsParametersList.Remove(botsParametersList.Find(bot => bot.id == botParameters.id));
-                            }
+                            //BotParameters botParameters = _botRanking.KillWorstBot();
+                            //if (botParameters != null)
+                            //{
+                            //    botsParametersList.Remove(botsParametersList.Find(bot => bot.id == botParameters.id));
+                            //}
                             _botRanking.CalculateBestRankings();
                         }
                     }
@@ -280,19 +280,6 @@ namespace BotEngine
             }
         }
 
-        protected virtual void GenerateAndSaveExampleStrategies()
-        {
-            try
-            {
-                //BBStrategy bBStrategy = new BBStrategy(,);
-
-            }
-            catch (Exception e)
-            {
-                DebugMessage(e);
-            }
-        }
-
         protected virtual void WaitForFirstCandles()
         {
             try
@@ -422,30 +409,6 @@ namespace BotEngine
             return null;
         }
 
-        protected virtual Dictionary<Broker, List<MarketInfo>> GetAllBrokerMarketsDict()
-        {
-            try
-            {
-                Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = new Dictionary<Broker, List<MarketInfo>>();
-                var brokers = Broker.GetAllBrokers();
-                foreach (var broker in brokers)
-                {
-                    if (activeBrokerMarketsDict.ContainsKey(broker))
-                    {
-                        continue;
-                    }
-                    activeBrokerMarketsDict.Add(broker, broker.GetMarketInfos());
-                }
-                return activeBrokerMarketsDict;
-            }
-            catch (Exception e)
-            {
-                DebugMessage(e);
-            }
-            return null;
-        }
-
-
         protected virtual void CleanUnusedData()
         {
             try
@@ -457,21 +420,5 @@ namespace BotEngine
                 DebugMessage(e);
             }
         }
-
-        protected virtual void GetAllCandleData()
-        {
-            try
-            {
-                foreach (var broker in Broker.GetAllBrokers())
-                {
-
-                }
-            }
-            catch (Exception e)
-            {
-                DebugMessage(e);
-            }
-        }
-
     }
 }

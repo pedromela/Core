@@ -29,7 +29,9 @@ namespace BrokerLib
         public enum BrokerType
         {
             exchange,
-            margin
+            margin,
+            exchange_dev,
+            margin_dev
         }
 
         public enum TransactionType
