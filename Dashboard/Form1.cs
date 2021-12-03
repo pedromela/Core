@@ -151,6 +151,13 @@ namespace Dashboard
             pnlNav.Top = btnSettings.Top;
             pnlNav.Left = btnSettings.Left;
             btnSettings.BackColor = Color.FromArgb(46, 51, 73);
+
+            lblTitle.Text = "Settings";
+            pnlFormLoader.Controls.Clear();
+            FormSettings formSettings = new FormSettings() { Dock = DockStyle.Fill, TopLevel = false, TopMost = true };
+            formSettings.FormBorderStyle = FormBorderStyle.None;
+            pnlFormLoader.Controls.Add(formSettings);
+            formSettings.Show();
         }
 
         private void btnTransactionErrors_Click(object sender, EventArgs e)

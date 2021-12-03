@@ -773,7 +773,7 @@ namespace BotEngine.Bot
                 }
                 if (ap == null)
                 {
-                    BotEngine.DebugMessage("CFDBot::UserOrder(): " + userBotRelation.UserId + " / " + userBotRelation.BotId + " acess point not found.");
+                    BotEngine.DebugMessage("BotBase::UserOrder(): " + userBotRelation.UserId + " / " + userBotRelation.BotId + " acess point not found.");
                     return;
                 }
 
@@ -785,7 +785,7 @@ namespace BotEngine.Bot
                 }
                 if (equity == null)
                 {
-                    BotEngine.DebugMessage("CFDBot::UserOrder(): EquityId " + userBotRelation.EquityId + " not found. userBotRelation botId/userId: " + userBotRelation.BotId + ":" + userBotRelation.UserId);
+                    BotEngine.DebugMessage("BotBase::UserOrder(): EquityId " + userBotRelation.EquityId + " not found. userBotRelation botId/userId: " + userBotRelation.BotId + "/" + userBotRelation.UserId);
                     equity = Equity.Initialize(_broker, ap, _botParameters.Market);
                     userBotRelation.EquityId = equity.id;
                     userBotRelation.Update();
@@ -843,7 +843,7 @@ namespace BotEngine.Bot
                         }
                         else
                         {
-                            BotEngine.DebugMessage(String.Format("CFDBot::ProcessLockProfits() : transactionType not valid."));
+                            BotEngine.DebugMessage(String.Format("BotBase::ProcessLockProfits() : transactionType not valid."));
                             return false;
                         }
 
@@ -1649,7 +1649,7 @@ namespace BotEngine.Bot
                 }
                 else if (botParameters.BrokerId == Brokers.OANDA)
                 {
-                    return new CFDBot(botParameters);
+                    return new MarginBot(botParameters);
                 }
                 return new Bot(botParameters);
             }

@@ -230,7 +230,7 @@ namespace BotEngine
                 IEnumerable<BotBase> botsList = _botDict[timeFrame].Values.Where(bot => bot._botParameters.TimeFrame == timeFrame);
                 Task[] loadingTaks = new Task[botsList.Count()];
                 int i = 0;
-                HashSet<string> processedIndicatorsEngines = new HashSet<string>();
+                ConcurrentHashSet<string> processedIndicatorsEngines = new ConcurrentHashSet<string>();
 
                 foreach (var bot in botsList)
                 {
@@ -258,7 +258,7 @@ namespace BotEngine
                                 if (!processedIndicatorsEngines.Contains(bot._signalsEngineId + ":" + timeFrame))
                                 {
                                     _signalsEngineDict[bot._signalsEngineId].UpdateIndicators(timeFrame);
-                                    DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} UPDADE COMPLETE {2}!", timeFrame, bot._signalsEngineId, iteration));
+                                    //DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} UPDADE COMPLETE {2}!", timeFrame, bot._signalsEngineId, iteration));
                                     processedIndicatorsEngines.Add(bot._signalsEngineId + ":" + timeFrame);
                                 }
                             }
@@ -287,6 +287,7 @@ namespace BotEngine
                 {
                     ready[timeFrame].Ready = true;
                 }
+                DebugMessage(String.Format("UpdateByTimeFrame({0}): COMPLETE {1}!", timeFrame, iteration));
             }
             catch (Exception e)
             {
