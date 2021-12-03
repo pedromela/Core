@@ -935,7 +935,7 @@ namespace BotEngine.Bot
             return false;
         }
 
-        public bool CloseTrades(Transaction t, string description = "")
+        public virtual bool CloseTrades(Transaction t, string description = "")
         {
             try
             {
@@ -991,7 +991,7 @@ namespace BotEngine.Bot
             }
         }
 
-        public void SubscribedUsersOrder(Transaction t)
+        public virtual void SubscribedUsersOrder(Transaction t)
         {
             try
             {
