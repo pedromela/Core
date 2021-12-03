@@ -357,7 +357,7 @@ namespace TelegramEngine.Telegram
             }
         }
 
-        public override void CloseTrades(Transaction t, string description = "")
+        public override bool CloseTrades(Transaction t, string description = "")
         {
             try
             {
@@ -382,12 +382,13 @@ namespace TelegramEngine.Telegram
                 }
 
                 StoreSellOrderTransaction(t, _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame), description);
-
+                return true;
             }
             catch (Exception e)
             {
                 TelegramEngine.DebugMessage(e);
             }
+            return false;
         }
 
         public bool TelegramTransactionsProcessed(IEnumerable<Transaction> transactions) 
