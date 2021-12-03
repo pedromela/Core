@@ -288,18 +288,6 @@ namespace BotEngine.Bot
             smartBuyTransactions.Add(new SmartTransaction(last.Close, null, GetTransactionLongType(), quantity));
         }
 
-        public void BuyQueue(Candle last, float quantity)
-        {
-            try
-            {
-                //buyTransactionsQuantity += quantity;
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
-        }
-
         public Transaction Buy(Candle last, float quantity)
         {
             try
@@ -312,18 +300,6 @@ namespace BotEngine.Bot
                 BotEngine.DebugMessage(e);
             }
             return null;
-        }
-
-        public void SellQueue(Candle last, float quantity)
-        {
-            try
-            {
-                //sellTransactionsQuantity += quantity;
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
         }
 
         public void SmartSell(Transaction Buy, Candle LastCandle)
@@ -597,20 +573,17 @@ namespace BotEngine.Bot
                 }
                 else if (fitness < 0) // Stop Loss
                 {
-                    ProcessStopLoss(t, lastCandle);
-                    result = true;
+                    result = ProcessStopLoss(t, lastCandle);
                 }
                 else
                 {
                     if (_botParameters.TrailingStop)
                     {
-                        ProcessTrailingStop(t, lastCandle);
-                        result = true;
+                        result = ProcessTrailingStop(t, lastCandle);
                     }
                     else if (_botParameters.LockProfits)
                     {
-                        ProcessLockProfits(t, lastCandle, profit);
-                        result = true;
+                        result = ProcessLockProfits(t, lastCandle, profit);
                     }
                 }
                 currentProfit += profit;

@@ -572,25 +572,21 @@ namespace BotEngine.Bot
 
                 if (fitness > FitnessLimit)
                 {
-                    CloseTrades(t);
-                    result = true;
+                    result = CloseTrades(t);
                 }
                 else if (fitness < 0) // Stop Loss
                 {
-                    ProcessStopLoss(t, lastCandle);
-                    result = true;
+                    result = ProcessStopLoss(t, lastCandle);
                 }
                 else
                 {
                     if (_botParameters.TrailingStop)
                     {
-                        ProcessTrailingStop(t, lastCandle);
-                        result = true;
+                        result = ProcessTrailingStop(t, lastCandle);
                     }
                     else if (_botParameters.LockProfits)
                     {
-                        ProcessLockProfits(t, lastCandle, profit);
-                        result = true;
+                        result = ProcessLockProfits(t, lastCandle, profit);
                     }
                 }
                 currentProfit += profit;
@@ -810,6 +806,7 @@ namespace BotEngine.Bot
 
                 if (trade == null)
                 {
+                    trade = new Trade(ap.id, transaction.id, null, userBotRelation.DefaultTransactionAmount, lastCandle.Close, transaction.Market, transaction.Type );
                     tradeErrors.Add(trade);
                     throw new TradeErrorException("Trade was null...");
                 }
@@ -821,7 +818,7 @@ namespace BotEngine.Bot
             }
         }
 
-        public void ProcessLockProfits(Transaction t, Candle lastCandle, float profit)
+        public bool ProcessLockProfits(Transaction t, Candle lastCandle, float profit)
         {
             try
             {
@@ -829,6 +826,7 @@ namespace BotEngine.Bot
                 {
                     CloseTrades(t, t.States + ";halftransaction;takeprofit50"); // sell half of the transaction amount, 
                                                                                 // the sell function creates a new transaction and change(divide by 2) the amount of the old transaction
+                    return true;
                 }
                 else if (profit > _botParameters.Increase / 10.0)
                 {
@@ -846,7 +844,7 @@ namespace BotEngine.Bot
                         else
                         {
                             BotEngine.DebugMessage(String.Format("CFDBot::ProcessLockProfits() : transactionType not valid."));
-                            return;
+                            return false;
                         }
 
                         if (condition)
@@ -858,6 +856,7 @@ namespace BotEngine.Bot
                         else
                         {
                             CloseTrades(t, t.States + ";lockedremainingprofit");
+                            return true;
                         }
                     }
                 }
@@ -874,9 +873,10 @@ namespace BotEngine.Bot
             {
                 BotEngine.DebugMessage(e);
             }
+            return false;
         }
 
-        public void ProcessTrailingStop(Transaction t, Candle lastCandle)
+        public bool ProcessTrailingStop(Transaction t, Candle lastCandle)
         {
             try
             {
@@ -889,6 +889,7 @@ namespace BotEngine.Bot
                     if (lastCandle.Close <= t.LastProfitablePrice * (1.0f - _botParameters.TrailingStopValue))
                     {
                         CloseTrades(t, t.States + ";trailingstop");
+                        return true;
                     }
                 }
                 else if (t.Type == TransactionType.sell)
@@ -900,6 +901,7 @@ namespace BotEngine.Bot
                     if (lastCandle.Close >= t.LastProfitablePrice * (1.0f + _botParameters.TrailingStopValue))
                     {
                         CloseTrades(t, t.States + ";trailingstop");
+                        return true;
                     }
                 }
 
@@ -908,9 +910,10 @@ namespace BotEngine.Bot
             {
                 BotEngine.DebugMessage(e);
             }
+            return false;
         }
 
-        public void ProcessStopLoss(Transaction t, Candle lastCandle)
+        public bool ProcessStopLoss(Transaction t, Candle lastCandle)
         {
             try
             {
@@ -923,14 +926,16 @@ namespace BotEngine.Bot
                     }
                 }
                 CloseTrades(t, t.States + ";stoploss");
+                return true;
             }
             catch (Exception e)
             {
                 BotEngine.DebugMessage(e);
             }
+            return false;
         }
 
-        public void CloseTrades(Transaction t, string description = "")
+        public bool CloseTrades(Transaction t, string description = "")
         {
             try
             {
@@ -944,11 +949,13 @@ namespace BotEngine.Bot
                     }
                 }
                 StoreSellOrderTransaction(t, _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame), description);
+                return true;
             }
             catch (Exception e)
             {
                 BotEngine.DebugMessage(e);
             }
+            return false;
         }
 
         public void CloseTrade(Trade trade, Transaction transaction, string description = "")
@@ -969,7 +976,8 @@ namespace BotEngine.Bot
 
                     if (closetrade == null)
                     {
-                        tradeErrors.Add(trade);
+                        closetrade = new Trade(accessPoint.id, transaction.id, null, trade.Amount, transaction.Price, transaction.Market, transaction.Type, trade.id);
+                        tradeErrors.Add(closetrade);
                         throw new TradeErrorException("Trade close was null...");
                     }
                     StoreTrade(closetrade);
@@ -1002,7 +1010,14 @@ namespace BotEngine.Bot
                         {
                             continue;
                         }
-                        UserOrder(t, userBotRelation, lastCandle);
+                        try
+                        {
+                            UserOrder(t, userBotRelation, lastCandle);
+                        }
+                        catch (Exception e)
+                        {
+                            BotEngine.DebugMessage(e);
+                        }
                     }
                 }
             }
@@ -1011,7 +1026,6 @@ namespace BotEngine.Bot
                 BotEngine.DebugMessage(e);
             }
         }
-
 
         public Trade StoreTrade(Trade t)
         {
@@ -1160,7 +1174,7 @@ namespace BotEngine.Bot
             foreach (var trade in tradeErrors)
             {
                 BotEngine.DebugMessage("Trade Error!");
-                //ProcessErrorTrade(trade);
+                ProcessErrorTrade(trade);
             }
             foreach (var transaction in transactionErrors)
             {
@@ -1316,11 +1330,18 @@ namespace BotEngine.Bot
                             userBotRelation = botContext.UserBotRelations.SingleOrDefault(m => m.BotId == _botParameters.id);
                         }
                         Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
-                        UserOrder(transaction, userBotRelation, lastCandle);
+                        try
+                        {
+                            UserOrder(transaction, userBotRelation, lastCandle);
+                        }
+                        catch (Exception e)
+                        {
+                            BotEngine.DebugMessage(e);
+                        }
                     }
                     else if (IsTransactionSellTypes(t.Type))
                     {
-                        trade = _tradesDict[t.Type].Values.SingleOrDefault(m => m.TransactionId == t.id && m.Type == t.Type);
+                        trade = _tradesDict[t.Type].Values.SingleOrDefault(m => m.BuyTradeId == t.id);
 
                         CloseTrade(trade, transaction, transaction.States + ";ERROR");
                     }

@@ -67,7 +67,7 @@ namespace BotLib.Models
                 DeScore1 = 0;
             }
 
-            float FinalScore = Score1 * 0.01f + Score2 * 0.5f + Score3 * 0.5f  + Score4 * 0.3f + Score5 * 0.5f - DeScore1 * 0.1f;
+            float FinalScore = Score1 * 0.01f + Score2 * 0.05f + Score3 * 0.05f  + Score4 * 0.03f + Score5 * 0.5f - DeScore1 * 0.1f;
 
             return FinalScore;
         }

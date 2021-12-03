@@ -1,7 +1,5 @@
 ﻿using BotLib.Models;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace BotEngine.Bot
 {
@@ -9,11 +7,10 @@ namespace BotEngine.Bot
     {
         public int Compare(Score x, Score y)
         {
-            float scorex = x.CalculateFinalScore();//(x.Positions > 0 ? x.Successes / x.Positions : 0)  + ;
-            float scorey = y.CalculateFinalScore();//(y.Positions > 0 ? y.Successes / y.Positions : 0) + ;
+            float scorex = x.CalculateFinalScore();
+            float scorey = y.CalculateFinalScore();
 
             return scorey.CompareTo(scorex);
-
         }
     }
 }
