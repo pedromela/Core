@@ -191,12 +191,11 @@ namespace BacktesterEngine
                         return;
                     }
 
-                    BotBase bot = BotBase.GenerateBotFromParameters(botParameters);
+                    BotBase bot = BotBase.GenerateBotFromParameters(botParameters, true);
                     if (!_botDict.ContainsKey(botParameters.TimeFrame))
                     {
                         _botDict.Add(botParameters.TimeFrame, new Dictionary<string, BotBase>());
                     }
-                    bot._backtest = true;
 
                     _botDict[botParameters.TimeFrame].Add(botParameters.id, bot);
                     DebugMessage(String.Format("BacktesterEngine::Init() : Adding bot {1}/{0}", botParameters.id, botParameters.BotName));

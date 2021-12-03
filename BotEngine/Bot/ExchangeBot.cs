@@ -8,8 +8,8 @@ namespace BotEngine.Bot
 {
     public class ExchangeBot : BotBase
     {
-        public ExchangeBot(BotParameters botParameters)
-        : base(botParameters)
+        public ExchangeBot(BotParameters botParameters, bool backtest = false)
+        : base(botParameters, backtest)
         {
 
         }

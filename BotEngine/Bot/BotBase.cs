@@ -1624,7 +1624,7 @@ namespace BotEngine.Bot
         //////////////////////// STATIC FUNCTIONS /////////////////////////
         ///////////////////////////////////////////////////////////////////
 
-        public static BotBase DecideBotType(BotParameters botParameters)
+        public static BotBase DecideBotType(BotParameters botParameters, bool backtest = false)
         {
             try
             {
@@ -1632,19 +1632,19 @@ namespace BotEngine.Bot
                 {
                     if (botParameters.BrokerType.Equals(BrokerType.exchange))
                     {
-                        return new Bot(botParameters);
+                        return new Bot(botParameters, backtest);
                     }
                     else if (botParameters.BrokerType.Equals(BrokerType.margin))
                     {
-                        return new CFDBot(botParameters);
+                        return new CFDBot(botParameters, backtest);
                     }
                     else if (botParameters.BrokerType.Equals(BrokerType.exchange_dev))
                     {
-                        return new ExchangeBot(botParameters);
+                        return new ExchangeBot(botParameters, backtest);
                     }
                     else if (botParameters.BrokerType.Equals(BrokerType.margin_dev))
                     {
-                        return new MarginBot(botParameters);
+                        return new MarginBot(botParameters, backtest);
                     }
                 }
                 else if (botParameters.BrokerId == Brokers.OANDA)
@@ -1700,11 +1700,11 @@ namespace BotEngine.Bot
         //    }
         //    return null;
         //}
-        public static BotBase GenerateBotFromParameters(BotParameters botParameters)
+        public static BotBase GenerateBotFromParameters(BotParameters botParameters, bool backtest = false)
         {
             try
             {
-                BotBase bot = DecideBotType(botParameters);
+                BotBase bot = DecideBotType(botParameters, backtest);
 
                 bot.RecreateSmartSellTransactions(botParameters.SmartSellTransactions);
                 return bot;

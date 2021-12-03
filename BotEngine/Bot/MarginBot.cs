@@ -8,8 +8,8 @@ namespace BotEngine.Bot
 {
     public class MarginBot : BotBase
     {
-        public MarginBot(BotParameters botParameters)
-        : base(botParameters)
+        public MarginBot(BotParameters botParameters, bool backtest = false)
+        : base(botParameters, backtest)
         {
 
         }

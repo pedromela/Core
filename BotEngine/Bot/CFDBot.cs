@@ -9,8 +9,8 @@ namespace BotEngine.Bot
 {
     public class CFDBot : BotBase
     {
-        public CFDBot(BotParameters botParameters)
-        : base(botParameters)
+        public CFDBot(BotParameters botParameters, bool backtest = false)
+        : base(botParameters, backtest)
         {
 
         }
