@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UtilsLib.Utils;
 using BrokerLib.Exceptions;
+using BacktesterLib.Lib;
 
 namespace BotEngine.Bot
 {
@@ -70,10 +71,12 @@ namespace BotEngine.Bot
         public MarketInfo _marketInfo = null;
         public string _signalsEngineId = null;
         public ConditionStrategy _conditionStrategy = null;
-        protected float FitnessLimit = 0.9f;
+        public BacktestData _backtestData = null;
 
         public Dictionary<TransactionType, Dictionary<string, Transaction>> _transactionsDict = null;
         public Dictionary<TransactionType, Dictionary<string, Trade>> _tradesDict = null;
+
+        protected float FitnessLimit = 0.9f;
 
         public bool Keepgoin = true;
         public bool StopBuying = false;
@@ -130,6 +133,7 @@ namespace BotEngine.Bot
                 }
 
                 InitScore();
+                _backtestData = new BacktestData();
             }
         }
 
@@ -217,6 +221,31 @@ namespace BotEngine.Bot
             _botParameters.StrategyId = botParameters.StrategyId;
 
             _signalsEngineId = IndicatorsEngine.DecideSignalsEngineId(botParameters.BrokerId, botParameters.Market);
+        }
+
+        public void BacktestDataUpdate(DateTime dateTime) 
+        {
+            Dictionary<string, Candle> points = new Dictionary<string, Candle>();
+            var indicatorNames = _conditionStrategy.GetIndicatorsNames();
+            foreach (var indicatorNameDesc in indicatorNames)
+            {
+                var indicator = _signalsEngine.GetIndicator(indicatorNameDesc.Key, _botParameters.TimeFrame);
+                var indicatorLinePoints = indicator.GetLastValue();
+                foreach (var pair in indicatorLinePoints)
+                {
+                    if (points.ContainsKey(pair.Key) || !indicatorNameDesc.Value.Contains(pair.Key))
+                    {
+                        continue;
+                    }
+                    points.Add(String.Join("_", indicatorNameDesc.Key, pair.Key), pair.Value);
+                }
+            }
+            _backtestData.Update(_score, dateTime, _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame), points, BacktestingState.running);
+        }
+
+        public void BacktestDataReset() 
+        {
+            _backtestData.Reset();
         }
 
         public float Profit(Transaction transaction)

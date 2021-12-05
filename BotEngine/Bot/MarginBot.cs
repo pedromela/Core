@@ -57,6 +57,9 @@ namespace BotEngine.Bot
                     IEnumerable<Transaction> sellTransactions = GetTransactionsByType(TransactionType.sell);
                     IEnumerable<Transaction> buyTransactions = GetTransactionsByType(TransactionType.buy);
 
+                    buyTransactions = buyTransactions != null ? buyTransactions : new List<Transaction>();
+                    sellTransactions = sellTransactions != null ? sellTransactions : new List<Transaction>();
+
                     if (ProcessCloseTransactions(lastCandle, buyTransactions, sellTransactions) == 0)
                     {
                         ProcessTransactions(lastCandle, buyTransactions, sellTransactions);

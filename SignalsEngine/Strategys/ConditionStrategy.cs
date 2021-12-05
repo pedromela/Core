@@ -5,6 +5,7 @@ using BrokerLib.Models;
 using SignalsEngine.Conditions;
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using static BrokerLib.BrokerLib;
 
 namespace SignalsEngine.Strategys
@@ -17,6 +18,8 @@ namespace SignalsEngine.Strategys
         public string _strategyId;
         public TimeFrames _timeFrame;
         public string _botId;
+        public ConditionStrategyData _conditionStrategyData;
+
         public ConditionStrategy(string name, MarketInfo marketInfo, TimeFrames timeFrame) 
         {
             _name = name;
@@ -31,6 +34,7 @@ namespace SignalsEngine.Strategys
             _botId = botId;
             _name = conditionStrategyData.Name;
             _strategyId = conditionStrategyData.id;
+            _conditionStrategyData = conditionStrategyData;
             _timeFrame = timeFrame;
             _marketInfo = marketInfo;// MarketInfo.Construct((Brokers)conditionStrategyData.BrokerId, conditionStrategyData.Market, true);
             _conditionsDictionary = new Dictionary<TransactionType, List<TextCondition>>();
@@ -203,5 +207,68 @@ namespace SignalsEngine.Strategys
             }
             return null;
         }
+
+        public Dictionary<string, List<string>> GetIndicatorsNames()
+        {
+            try
+            {
+                if (_conditionStrategyData == null)
+                {
+                    return null;
+                }
+                List<string> indicatorLineNames = new List<string>();
+
+                GetLineNames(_conditionStrategyData.BuyCondition, ref indicatorLineNames);
+                GetLineNames(_conditionStrategyData.BuyCloseCondition, ref indicatorLineNames);
+                GetLineNames(_conditionStrategyData.SellCondition, ref indicatorLineNames);
+                GetLineNames(_conditionStrategyData.SellCloseCondition, ref indicatorLineNames);
+
+                Dictionary<string, List<string>> indicators = new Dictionary<string, List<string>>();
+
+                foreach (string indicatorLineName in indicatorLineNames)
+                {
+                    var tokens = indicatorLineName.Split("_");
+                    if (tokens.Length == 3)
+                    {
+                        string name = String.Format("{0}_{1}", tokens[0], tokens[1]);
+                        string lineName = tokens[2];
+                        if (!indicators.ContainsKey(name))
+                        {
+                            indicators.Add(name, new List<string>());
+                        }
+                        indicators[name].Add(lineName);
+
+                    }
+                }
+
+                return indicators;
+            }
+            catch (Exception e)
+            {
+                UtilsLib.UtilsLib.DebugMessage(e);
+            }
+            return null;
+        }
+
+        public static void GetLineNames(string condition, ref List<string> indicatorNames)
+        {
+            try
+            {
+                MatchCollection matches = Regex.Matches(condition, @"(?<!>\w)i_[A-Za-z]+(:\d*)*_[A-Za-z]+");
+                foreach (Match match in matches)
+                {
+                    if (indicatorNames.Contains(match.Value))
+                    {
+                        continue;
+                    }
+                    indicatorNames.Add(match.Value);
+                }
+            }
+            catch (Exception e)
+            {
+                UtilsLib.UtilsLib.DebugMessage(e);
+            }
+        }
+
     }
 }

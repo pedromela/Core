@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BotLib\BotLib.csproj" />
     <ProjectReference Include="..\BrokerLib\BrokerLib.csproj" />
+    <ProjectReference Include="..\SignalsEngine\SignalsEngine.csproj" />
   </ItemGroup>
 
 </Project>

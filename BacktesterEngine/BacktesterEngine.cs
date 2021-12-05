@@ -223,7 +223,8 @@ namespace BacktesterEngine
                 InitBot(botParameters, fromDate, toDate);
                 BotBase bot = _botDict[botParameters.TimeFrame][botParameters.id];
                 IndicatorsEngine indicatorsEngine = _signalsEngineDict[bot._signalsEngineId];
-                long count = 0;
+                long count = 1;
+                bool first = true;
                 while(!indicatorsEngine.CandlesEnd(bot._botParameters.TimeFrame))
                 {
 
@@ -231,14 +232,23 @@ namespace BacktesterEngine
                     indicatorsEngine.UpdateIndicators(bot._botParameters.TimeFrame);
                     bot.UpdateSignals(indicatorsEngine);
                     bot.ProcessTransactions();
+                    bot.BacktestDataUpdate(indicatorsEngine.GetCurrentCandle(bot._botParameters.TimeFrame).Timestamp);
                     if (count % 100 == 0)
                     {
-                        observer.OnNext(new BacktestData(bot._score.Positions, (int)bot._score.Successes));
+                        bot._backtestData.State = first ? BacktestingState.first : BacktestingState.running;
+                        first = false;
+                        observer.OnNext(bot._backtestData);
+                        bot.BacktestDataReset();
                     }
                     count++;
                 }
                 BacktesterEngine.DebugMessage($"Backtest {bot._botParameters.id} completed!");
-                observer.OnNext(new BacktestData(-1, -1));
+                var score = new BacktesterScore();
+                score.Positions = -2;
+                score.Successes = -2;
+                var complete = new BacktestData();
+                complete.Update(score, DateTime.Now, null, null, BacktestingState.completed);
+                observer.OnNext(complete);
             }
             catch (Exception e)
             {

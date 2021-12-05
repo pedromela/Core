@@ -18,9 +18,12 @@ namespace SignalsEngine.Indicators
             this.Period = Period;
             this.Lines = new Dictionary<string, int>();
             this.AllowInconsistentData = AllowInconsistentData;
-            for (int i = 0; i < Lines.Count; i++)
+            if (Lines != null)
             {
-                this.Lines.Add(Lines[i], i);
+                for (int i = 0; i < Lines.Count; i++)
+                {
+                    this.Lines.Add(Lines[i], i);
+                }
             }
             this.Values = new LinkedList<Dictionary<string, Candle>>();
         }
