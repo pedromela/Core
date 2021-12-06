@@ -247,7 +247,7 @@ namespace BacktesterEngine
                 score.Positions = -2;
                 score.Successes = -2;
                 var complete = new BacktestData();
-                complete.Update(score, DateTime.Now, null, null, BacktestingState.completed);
+                complete.Update(score, DateTime.Now, null, null, null, null, BacktestingState.completed);
                 observer.OnNext(complete);
             }
             catch (Exception e)

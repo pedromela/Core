@@ -240,7 +240,7 @@ namespace BotEngine.Bot
                     points.Add(String.Join("_", indicatorNameDesc.Key, pair.Key), pair.Value);
                 }
             }
-            _backtestData.Update(_score, dateTime, _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame), points, BacktestingState.running);
+            _backtestData.Update(_score, dateTime, _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame), points, null , null, BacktestingState.running);
         }
 
         public void BacktestDataReset() 
@@ -1144,6 +1144,16 @@ namespace BotEngine.Bot
                     _transactionsDict.Add(t.Type, new Dictionary<string, Transaction>());
                 }
                 _transactionsDict[t.Type].Add(t.id, t);
+
+                if (IsTransactionBuyTypes(t.Type))
+                {
+                    _backtestData.Update(null, DateTime.MinValue, null, null, t, null, BacktestingState.running);
+                }
+                else if (IsTransactionSellTypes(t.Type))
+                {
+                    _backtestData.Update(null, DateTime.MinValue, null, null, null, t, BacktestingState.running);
+                }
+
 
                 return t;
             }
