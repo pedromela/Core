@@ -88,6 +88,8 @@ namespace BacktesterLib.Lib
         {
             Candles.Clear();
             Lines.Clear();
+            ActiveTransactions.Clear();
+            HistoryTransactions.Clear();
         }
     }
 }

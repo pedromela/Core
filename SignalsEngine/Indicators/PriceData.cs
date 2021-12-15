@@ -193,7 +193,7 @@ namespace SignalsEngine.Indicators
                 if (reset)
                 {
                     _timeSeriesDay.Clear();
-                    _timeSeriesDay.AddLastValue(GetLastValue());
+                    _timeSeriesDay.AddLastValue(BotLib.BotLib.Backtest ? _selectedTimeSeries.GetLastValue() : GetLastValue());
                 }
                 return _timeSeriesDay;
             }
@@ -210,6 +210,23 @@ namespace SignalsEngine.Indicators
             {
                 //FIXME
                 return _timeSeriesDay;
+            }
+            catch (Exception e)
+            {
+                SignalsEngine.DebugMessage(e);
+            }
+            return null;
+        }
+
+        public override Candle GetLastValue(string name = "middle")
+        {
+            try
+            {
+                if (BotLib.BotLib.Backtest)
+                {
+                    return _selectedTimeSeries.GetLastValue("middle");
+                }
+                return base.GetLastValue("middle");
             }
             catch (Exception e)
             {

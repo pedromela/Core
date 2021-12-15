@@ -293,7 +293,7 @@ namespace SignalsEngine.Indicators
             return null;
         }
 
-        public Candle GetLastValue(string name = "middle")
+        public virtual Candle GetLastValue(string name = "middle")
         {
             try
             {

@@ -445,7 +445,14 @@ namespace SignalsEngine.Indicators
             {
                 if (IndicatorsSharedData.Instance.ContainsCandleData(_marketInfo.GetMarketDescription(), timeFrame) && IndicatorsSharedData.Instance.ContainsIndicators(_marketInfo.GetMarketDescription(), timeFrame))
                 {
-                    if (timeFrame == TimeFrames.M1)
+                    if (_backtest)
+                    {
+                        if (DateTimeExtensions.IsMidnight(GetCurrentCandle(timeFrame).Timestamp))
+                        {
+                            ResetDailyIndicators();
+                        }
+                    }
+                    else if (timeFrame == TimeFrames.M1)
                     {
                         DateTime date = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, DateTime.UtcNow.Minute, 0);
                         if (!_backtest && date.Equals(DateTime.Today.ToUniversalTime()))
@@ -453,6 +460,7 @@ namespace SignalsEngine.Indicators
                             ResetDailyIndicators();
                         }
                     }
+
                     Price timeSeries = null;
                     if (_backtest)
                     {

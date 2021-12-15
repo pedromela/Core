@@ -14,6 +14,6 @@ namespace BotLib
 
     public class BotLib : MyLogger
     {
-
+        public static bool Backtest = false;
     }
 }

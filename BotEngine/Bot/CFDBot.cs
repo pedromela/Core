@@ -162,9 +162,13 @@ namespace BotEngine.Bot
                 {
                     return fitnessBuy;
                 }
-                else
+                else if (fitnessBuy < fitnessSell)
                 {
                     return -fitnessSell;
+                }
+                else
+                {
+                    return 0;
                 }
             }
             catch (Exception e)

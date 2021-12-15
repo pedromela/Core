@@ -35,6 +35,7 @@ namespace BacktesterEngine
             _telegramContext = TelegramDBContext.newDBContext();
             _fromDate = fromDate;
             _toDate = toDate;
+            BotLib.BotLib.Backtest = true;
             //Run();
         }
 
@@ -149,16 +150,6 @@ namespace BacktesterEngine
 
                 Dictionary<BrokerDescription, List<string>> activeBrokerMarketStringsDict = GetActiveBrokerMarketStringsDict(botsParametersList);
                 Broker.InitBrokers(activeBrokerMarketStringsDict, true);
-                foreach (var provider in BrokerDBContext.providers)
-                {
-                    using (BrokerDBContext brokerContext = (BrokerDBContext)provider.GetDBContext())
-                    {
-                        if (brokerContext.GetActiveMarketsCountFromDB() > 0)
-                        {
-                            brokerContext.DeleteActiveMarketsFromDB();
-                        }
-                    }
-                }
                 Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = GetActiveBrokerMarketsDict(botsParametersList);
                 IndicatorsSharedData.InitInstance(activeBrokerMarketsDict, true);
 

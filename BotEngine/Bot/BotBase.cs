@@ -462,11 +462,11 @@ namespace BotEngine.Bot
         {
             try
             {
+                CurrentProfits currentProfits = new CurrentProfits();
                 if (transactions == null)
                 {
-                    return null;
+                    return currentProfits;
                 }
-                CurrentProfits currentProfits = new CurrentProfits();
                 int CurrentTransactions = transactions.Count();
                 float currentProfit = 0.0F;
                 int sellTransactionsByFrame = 0;
@@ -1145,15 +1145,17 @@ namespace BotEngine.Bot
                 }
                 _transactionsDict[t.Type].Add(t.id, t);
 
-                if (IsTransactionBuyTypes(t.Type))
+                if (BotLib.BotLib.Backtest)
                 {
-                    _backtestData.Update(null, DateTime.MinValue, null, null, t, null, BacktestingState.running);
+                    if (IsTransactionBuyTypes(t.Type))
+                    {
+                        _backtestData.Update(null, DateTime.MinValue, null, null, t, null, BacktestingState.running);
+                    }
+                    else if (IsTransactionSellTypes(t.Type))
+                    {
+                        _backtestData.Update(null, DateTime.MinValue, null, null, null, t, BacktestingState.running);
+                    }
                 }
-                else if (IsTransactionSellTypes(t.Type))
-                {
-                    _backtestData.Update(null, DateTime.MinValue, null, null, null, t, BacktestingState.running);
-                }
-
 
                 return t;
             }
