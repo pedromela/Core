@@ -13,6 +13,18 @@ namespace UtilsLib.Utils
             _providers = providers;
         }
 
+        public void Debug(MyDbContext context) 
+        {
+            UtilsLib.DebugMessage(
+                String.Format(
+                    "{0}.{1} has {2}/{3} contexts active. {4}",
+                    context.GetType(),
+                    GetType(),
+                    context.ContextCount,
+                    context.CurrentContexts.Count,
+                    context.Database.GetConnectionString()));
+        }
+
         public virtual void Store()
         {
             try
@@ -28,7 +40,8 @@ namespace UtilsLib.Utils
                         }
                         catch (Exception e)
                         {
-                            UtilsLib.DebugMessage(e);
+                            UtilsLib.DebugMessage(e.Message);
+                            Debug(context);
                         }
                     }
                 }
@@ -56,9 +69,10 @@ namespace UtilsLib.Utils
                         }
                         catch (Exception e)
                         {
-                            UtilsLib.DebugMessage(e);
+                            UtilsLib.DebugMessage(e.Message);
+                            Debug(context);
                         }
-                       //context.Database.CloseConnection();
+                        //context.Database.CloseConnection();
                     }
                 }
             }
@@ -79,20 +93,13 @@ namespace UtilsLib.Utils
                     {
                         try
                         {
-                            try
-                            {
-                                context.Update(this);
-                                context.SaveChanges();
-                            }
-                            catch (DbUpdateConcurrencyException)
-                            {
-                                context.Add(this);
-                                context.SaveChanges();
-                            }
+                            context.Update(this);
+                            context.SaveChanges();
                         }
                         catch (Exception e)
                         {
-                            UtilsLib.DebugMessage(e);
+                            UtilsLib.DebugMessage(e.Message);
+                            Debug(context);
                         }
                     }
                 }
@@ -114,22 +121,14 @@ namespace UtilsLib.Utils
                     {
                         try
                         {
-                            try
-                            {
-                                context.Update(this);
-                                await context.SaveChangesAsync();
-                                saves++;
-                            }
-                            catch (DbUpdateConcurrencyException)
-                            {
-                                context.Add(this);
-                                await context.SaveChangesAsync();
-                                saves++;
-                            }
+                            context.Update(this);
+                            await context.SaveChangesAsync();
+                            saves++;
                         }
                         catch (Exception e)
                         {
-                            UtilsLib.DebugMessage(e);
+                            UtilsLib.DebugMessage(e.Message);
+                            Debug(context);
                         }
                     }
                 }
@@ -156,7 +155,8 @@ namespace UtilsLib.Utils
                         }
                         catch (Exception e)
                         {
-                            UtilsLib.DebugMessage(e);
+                            UtilsLib.DebugMessage(e.Message);
+                            Debug(context);
                         }
                     }
                 }
@@ -184,7 +184,8 @@ namespace UtilsLib.Utils
                         }
                         catch (Exception e)
                         {
-                            UtilsLib.DebugMessage(e);
+                            UtilsLib.DebugMessage(e.Message);
+                            Debug(context);
                         }
                     }
                 }
@@ -210,7 +211,8 @@ namespace UtilsLib.Utils
                         }
                         catch (Exception e)
                         {
-                            UtilsLib.DebugMessage(e);
+                            UtilsLib.DebugMessage(e.Message);
+                            Debug(context);
                         }
                     }
                 }

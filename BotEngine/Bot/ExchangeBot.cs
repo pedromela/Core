@@ -44,7 +44,7 @@ namespace BotEngine.Bot
             return TransactionType.sellclose;
         }
 
-        public override void ProcessTransactions()
+        public override void ProcessTransactions(bool processBuyTypesTransactions = true)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace BotEngine.Bot
 
                     buyTransactions = buyTransactions != null ? buyTransactions : new List<Transaction>();
 
-                    if (ProcessCloseTransactions(lastCandle, buyTransactions, sellTransactions) == 0)
+                    if (ProcessCloseTransactions(lastCandle, buyTransactions, sellTransactions) == 0 && processBuyTypesTransactions)
                     {
                         ProcessTransactions(lastCandle, buyTransactions, sellTransactions);
                     }

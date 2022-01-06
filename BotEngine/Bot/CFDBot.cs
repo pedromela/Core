@@ -212,7 +212,7 @@ namespace BotEngine.Bot
             return TransactionType.sellclose;
         }
 
-        public override void ProcessTransactions()
+        public override void ProcessTransactions(bool processBuyTypesTransactions = true)
         {
             try
             {
@@ -225,7 +225,7 @@ namespace BotEngine.Bot
                     IEnumerable<Transaction> sellTransactions = GetTransactionsByType(TransactionType.sell);
                     IEnumerable<Transaction> buyTransactions = GetTransactionsByType(TransactionType.buy);
 
-                    if (ProcessCloseTransactions(lastCandle, sellTransactions, buyTransactions) == 0)
+                    if (ProcessCloseTransactions(lastCandle, sellTransactions, buyTransactions) == 0 && processBuyTypesTransactions)
                     {
                         ProcessBuyTransactions(lastCandle, sellTransactions, buyTransactions);
                     }

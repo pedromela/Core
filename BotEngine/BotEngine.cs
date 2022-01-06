@@ -12,6 +12,7 @@ using SignalsEngine.Indicators;
 using System.Threading.Tasks;
 using BrokerLib.Market;
 using BotEngine.Bot;
+using Microsoft.EntityFrameworkCore;
 
 namespace BotEngine
 {
@@ -227,56 +228,95 @@ namespace BotEngine
                     ready[timeFrame].Ready = false;
                 }
 
-                IEnumerable<BotBase> botsList = _botDict[timeFrame].Values.Where(bot => bot._botParameters.TimeFrame == timeFrame);
+                List<BotBase> botsList = new List<BotBase>();
+
+                if (timeFrame == TimeFrames.M1)
+                {
+                    try
+                    {
+                        foreach (var pair in _botDict.Values)
+                        {
+                            botsList.AddRange(pair.Values);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        int idebug = 0;
+                    }
+                }
+                else
+                {
+                    botsList.AddRange(_botDict[timeFrame].Values.Where(bot => bot._botParameters.TimeFrame == timeFrame));
+                }
                 Task[] loadingTaks = new Task[botsList.Count()];
                 int i = 0;
                 ConcurrentHashSet<string> processedIndicatorsEngines = new ConcurrentHashSet<string>();
+                //ConcurrentHashSet<Profit> profits = new ConcurrentHashSet<Profit>();
 
                 foreach (var bot in botsList)
                 {
-                    if (bot._botParameters.TimeFrame != timeFrame)
+                    if (bot._botParameters.TimeFrame != timeFrame && timeFrame != TimeFrames.M1)
                     {
                         continue;
                     }
                     loadingTaks[i++] = Task.Run(() =>
                     {
+                        if (!_signalsEngineDict.ContainsKey(bot._signalsEngineId))
+                        {
+                            DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} is not present in _signalsEngineDict", timeFrame.ToString(), bot._signalsEngineId));
+                            return;
+                        }
+
+                        if (_signalsEngineDict[bot._signalsEngineId].IsMarketClosed())
+                        {
+                            DebugMessage(String.Format("UpdateByTimeFrame({0}): BotId : {1} specified market is closed.", timeFrame.ToString(), bot._signalsEngineId));
+                            return;
+                        }
+                        lock (_signalsEngineDict[bot._signalsEngineId].Lock)
+                        {
+                            if (!processedIndicatorsEngines.Contains(bot._signalsEngineId + ":" + timeFrame))
+                            {
+                                _signalsEngineDict[bot._signalsEngineId].UpdateIndicators(timeFrame);
+                                //DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} UPDADE COMPLETE {2}!", timeFrame, bot._signalsEngineId, iteration));
+                                processedIndicatorsEngines.Add(bot._signalsEngineId + ":" + timeFrame);
+                            }
+                        }
+
+                        bot.UpdateSignals(_signalsEngineDict[bot._signalsEngineId]);
                         if (bot._botParameters.TimeFrame == timeFrame)
                         {
-                            if (!_signalsEngineDict.ContainsKey(bot._signalsEngineId))
-                            {
-                                DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} is not present in _signalsEngineDict", timeFrame.ToString(), bot._signalsEngineId));
-                                return;
-                            }
-
-                            if (_signalsEngineDict[bot._signalsEngineId].IsMarketClosed())
-                            {
-                                DebugMessage(String.Format("UpdateByTimeFrame({0}): BotId : {1} specified market is closed.", timeFrame.ToString(), bot._signalsEngineId));
-                                return;
-                            }
-                            lock (_signalsEngineDict[bot._signalsEngineId].Lock)
-                            {
-                                if (!processedIndicatorsEngines.Contains(bot._signalsEngineId + ":" + timeFrame))
-                                {
-                                    _signalsEngineDict[bot._signalsEngineId].UpdateIndicators(timeFrame);
-                                    //DebugMessage(String.Format("UpdateByTimeFrame({0}): {1} UPDADE COMPLETE {2}!", timeFrame, bot._signalsEngineId, iteration));
-                                    processedIndicatorsEngines.Add(bot._signalsEngineId + ":" + timeFrame);
-                                }
-                            }
-
-                            bot.UpdateSignals(_signalsEngineDict[bot._signalsEngineId]);
                             bot.ProcessTransactions();
-
-                            Profit profit = new Profit();
-                            profit.BotId = bot._botParameters.id;
-                            profit.ProfitValue = bot._score.AmountGained;
-                            profit.DrawBack = bot._score.CurrentProfit < 0 ? bot._score.CurrentProfit : 0;
-                            profit.Timestamp = DateTime.Now;
-                            _ = profit.StoreAsync();
-                            _ = bot._score.UpdateAsync();
                         }
+                        else
+                        {
+                            bot.ProcessTransactions(false);
+                        }
+
+                        Profit profit = new Profit();
+                        profit.BotId = bot._botParameters.id;
+                        profit.ProfitValue = bot._score.AmountGained;
+                        profit.DrawBack = bot._score.CurrentProfit < 0 ? bot._score.CurrentProfit : 0;
+                        profit.Timestamp = DateTime.Now;
+                        _ = profit.StoreAsync();
+                        //profits.Add(profit);
                     });
+
+                    if (loadingTaks[i - 1] == null)
+                    {
+                        int iDebug = 0;
+                    }
                 }
+
+                loadingTaks = loadingTaks.Where(t => t != null).ToArray();
                 Task.WaitAll(loadingTaks);
+
+                BotDBContext.Execute((botContext) => 
+                {
+                    botContext.Scores.UpdateRange(botsList.Select(bot => bot._score));
+                    //await botContext.Profits.AddRangeAsync(profits.ToArray());
+                    botContext.SaveChanges();
+                    return 0;
+                }, true);
 
                 foreach (var task in loadingTaks)
                 {
@@ -322,40 +362,6 @@ namespace BotEngine
             return null;
         }
 
-        public void UpdateBotParameters(Bot.Bot bot)
-        {
-            try
-            {
-                using (BotDBContext botContext = BotDBContext.newDBContext())
-                {
-                    BotParameters botParameters = botContext.BotsParameters.Single(e => e.id == bot._botParameters.id);
-                    //botParameters.BotId = bot.BotId;
-                    botParameters.Increase = bot._botParameters.Increase;
-                    botParameters.Decrease = bot._botParameters.Decrease;
-                    botParameters.DownPercentage = bot._botParameters.DownPercentage;
-                    botParameters.UpPercentage = bot._botParameters.UpPercentage;
-                    botParameters.SmartSellTransactions = bot._botParameters.SmartSellTransactions;
-                    botParameters.SmartBuyTransactions = bot._botParameters.SmartBuyTransactions;
-                    botParameters.TimeFrame = bot._botParameters.TimeFrame;
-                    botParameters.minSmartSellTransactions = bot._botParameters.minSmartSellTransactions;
-                    botParameters.minSmartBuyTransactions = bot._botParameters.minSmartBuyTransactions;
-                    botParameters.BotName = bot._botParameters.BotName;
-                    botParameters.StopLoss = bot._botParameters.StopLoss;
-                    botParameters.TakeProfit = bot._botParameters.TakeProfit;
-                    botParameters.LockProfits = bot._botParameters.LockProfits;
-                    botParameters.InitLastProfitablePrice = bot._botParameters.InitLastProfitablePrice;
-
-                    botContext.BotsParameters.Update(botParameters);
-                    botContext.SaveChanges();
-                }
-
-            }
-            catch (Exception e)
-            {
-                DebugMessage(e);
-            }
-        }
-
         private void CreateBot(BotParameters botParameters, BotParametersChanges botParameterschanges, Broker broker) 
         {
             try
@@ -367,7 +373,7 @@ namespace BotEngine
                     DebugMessage("UpdateBots() : BotId._signalsEngineId is empty!");
                     return;
                 }
-                if (!_botDict.ContainsKey(bot._botParameters.TimeFrame))
+                if (!_botDict.ContainsKey(bot._botParameters.TimeFrame) && Enum.IsDefined(typeof(TimeFrames), bot._botParameters.TimeFrame))
                 {
                     _botDict.Add(bot._botParameters.TimeFrame, new Dictionary<string, BotBase>());
                 }
@@ -384,12 +390,8 @@ namespace BotEngine
                 //SignalsEngine.SignalsEngine _signalsEngine = _signalsEngineDict[bot._signalsEngineId];
                 UserBotRelation userBotRelation = new UserBotRelation(bot._botParameters.id, botParameterschanges);
 
-                AccessPoint ap = null;
+                AccessPoint ap = BrokerDBContext.Execute((brokerContext) => brokerContext.AccessPoints.Find(userBotRelation.AccessPointId));
 
-                using (BrokerDBContext brokerContext = BrokerDBContext.newDBContextClient())
-                {
-                    ap = brokerContext.AccessPoints.Find(userBotRelation.AccessPointId);
-                }
                 if (ap == null)
                 {
                     userBotRelation.Store();
@@ -584,71 +586,62 @@ namespace BotEngine
             {
                 DebugMessage("############################################################");
                 DebugMessage("Cleaning Database...");
-                foreach (var provider in BotDBContext.providers)
+                BotDBContext.Execute((botContext) => 
                 {
-                    using (BotDBContext botContext = (BotDBContext) provider.GetDBContext())
+                    return BrokerDBContext.Execute((brokerContext) =>
                     {
-                        using (var brokerContext = BrokerDBContext.newDBContext())
+                        List<Score> scores = botContext.Scores.AsNoTracking().ToList();
+                        List<Equity> equities = brokerContext.Equitys.AsNoTracking().ToList();
+                        List<BotParameters> botsParameters = botContext.BotsParameters.AsNoTracking().ToList();
+                        List<UserBotRelation> userBotRelations = botContext.UserBotRelations.AsNoTracking().ToList();
+
+                        List<Score> scoresToRemove = new List<Score>();
+                        List<Equity> equitiesToRemove = new List<Equity>();
+                        List<BotParameters> botsParametersToRemove = new List<BotParameters>();
+                        List<UserBotRelation> userBotRelationsToRemove = new List<UserBotRelation>();
+                        List<Transaction> transactionsToRemove = new List<Transaction>();
+
+                        foreach (Score score in scores)
                         {
-                            List<Score> scores = botContext.Scores.ToList();
-                            List<Equity> equities = brokerContext.Equitys.ToList();
-                            List<BotParameters> botsParameters = botContext.BotsParameters.ToList();
-                            List<UserBotRelation> userBotRelations = botContext.UserBotRelations.ToList();
-                            //List<Transaction> transactions = brokerContext.Transactions.ToList();
-
-                            List<Score> scoresToRemove = new List<Score>();
-                            List<Equity> equitiesToRemove = new List<Equity>();
-                            List<BotParameters> botsParametersToRemove = new List<BotParameters>();
-                            List<UserBotRelation> userBotRelationsToRemove = new List<UserBotRelation>();
-                            List<Transaction> transactionsToRemove = new List<Transaction>();
-                            //List<Price> pricesToRemove = _botContext.Prices.Where(m => m.Timestamp < DateTime.UtcNow.AddDays(-30)).ToList();
-                            //List<Candle> candlesToRemove = brokerContext.Candles.Where(m => m.Timestamp < DateTime.UtcNow.AddDays(-30)).ToList();
-
-                            //_botContext.Prices.RemoveRange(pricesToRemove);
-                            //brokerContext.Candles.RemoveRange(candlesToRemove);
-
-                            foreach (Score score in scores)
+                            if (!botContext.BotsParameters.AsNoTracking().Any(m => m.id == score.BotParametersId))
                             {
-                                if (!botContext.BotsParameters.Any(m => m.id == score.BotParametersId))
-                                {
-                                    scoresToRemove.Add(score);
-                                }
+                                scoresToRemove.Add(score);
                             }
-                            botContext.Scores.RemoveRange(scoresToRemove);
-
-                            foreach (Equity equity in equities)
-                            {
-                                if (!botContext.UserBotRelations.Any(m => m.EquityId == equity.id))
-                                {
-                                    equitiesToRemove.Add(equity);
-                                }
-                            }
-                            brokerContext.Equitys.RemoveRange(equitiesToRemove);
-
-                            //foreach (Transaction transaction in transactions)
-                            //{
-                            //    if (!_botContext.BotsParameters.Any(m => m.id == transaction.BotId))
-                            //    {
-                            //        transactionsToRemove.Add(transaction);
-                            //    }
-                            //}
-                            //_brokerContext.Transactions.RemoveRange(transactionsToRemove);
-
-                            foreach (UserBotRelation userBotRelation in userBotRelations)
-                            {
-                                if (string.IsNullOrEmpty(userBotRelation.BotId) || 
-                                    (userBotRelation.IsVirtual == false && string.IsNullOrEmpty(userBotRelation.AccessPointId)) ||
-                                    botContext.BotsParameters.Find(userBotRelation.BotId) == null)
-                                {
-                                    userBotRelationsToRemove.Add(userBotRelation);
-                                }
-                            }
-                            botContext.UserBotRelations.RemoveRange(userBotRelationsToRemove);
-
-                            botContext.SaveChanges();
                         }
-                    }
-                }
+                        botContext.Scores.RemoveRange(scoresToRemove);
+
+                        foreach (Equity equity in equities)
+                        {
+                            if (!botContext.UserBotRelations.AsNoTracking().Any(m => m.EquityId == equity.id))
+                            {
+                                equitiesToRemove.Add(equity);
+                            }
+                        }
+                        brokerContext.Equitys.RemoveRange(equitiesToRemove);
+
+                        //foreach (Transaction transaction in transactions)
+                        //{
+                        //    if (!_botContext.BotsParameters.Any(m => m.id == transaction.BotId))
+                        //    {
+                        //        transactionsToRemove.Add(transaction);
+                        //    }
+                        //}
+                        //_brokerContext.Transactions.RemoveRange(transactionsToRemove);
+
+                        foreach (UserBotRelation userBotRelation in userBotRelations)
+                        {
+                            if (string.IsNullOrEmpty(userBotRelation.BotId) ||
+                                (userBotRelation.IsVirtual == false && string.IsNullOrEmpty(userBotRelation.AccessPointId)) ||
+                                botContext.BotsParameters.Find(userBotRelation.BotId) == null)
+                            {
+                                userBotRelationsToRemove.Add(userBotRelation);
+                            }
+                        }
+                        botContext.UserBotRelations.RemoveRange(userBotRelationsToRemove);
+
+                        return botContext.SaveChanges() + brokerContext.SaveChanges();
+                    }, true);
+                }, true);
                 DebugMessage("Clean done.");
                 DebugMessage("############################################################");
 

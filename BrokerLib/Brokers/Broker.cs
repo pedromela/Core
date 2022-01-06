@@ -768,11 +768,9 @@ namespace BrokerLib.Brokers
             }
             catch (Exception e)
             {
-                Candle candle;
-                using (BrokerDBContext brokerContext = BrokerDBContext.newDBContextClient())
-                {
-                    candle = brokerContext.Candles.FirstOrDefault(m => m.Symbol == market && m.TimeFrame == TimeFrames.M1);
-                }
+                Candle candle = BrokerDBContext.Execute<Candle>((brokerContext) => {
+                    return brokerContext.Candles.FirstOrDefault(m => m.Symbol == market && m.TimeFrame == TimeFrames.M1);
+                });
 
                 if (candle != null)
                 {

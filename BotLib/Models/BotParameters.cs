@@ -1,5 +1,6 @@
 ﻿using BrokerLib.Brokers;
 using BrokerLib.Market;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -155,8 +156,8 @@ namespace BotLib.Models
                 bool scoreExists = false;
                 using (BotDBContext context = BotDBContext.newDBContext())
                 {
-                    strategyExists = context.ConditionStrategiesData.Any(m => m.id == StrategyId);
-                    scoreExists = context.Scores.Any(m => m.BotParametersId == id);
+                    strategyExists = context.ConditionStrategiesData.AsNoTracking().Any(m => m.id == StrategyId);
+                    scoreExists = context.Scores.AsNoTracking().Any(m => m.BotParametersId == id);
                 }
                 return Valid() &&
                     strategyExists &&

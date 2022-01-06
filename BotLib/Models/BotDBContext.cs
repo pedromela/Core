@@ -7,7 +7,7 @@ using UtilsLib.Utils;
 
 namespace BotLib.Models
 {
-    public class BotDBContext : DbContext
+    public class BotDBContext : MyDbContext
     {
         public DbSet<BotParameters> BotsParameters { get; set; }
         public DbSet<BotParametersChanges> BotParametersChanges { get; set; }
@@ -63,22 +63,22 @@ namespace BotLib.Models
 
         public List<BotParameters> GetBotsFromDB()
         {
-            return BotsParameters.ToList();
+            return BotsParameters.AsNoTracking().ToList();
         }
 
         public List<ConditionStrategyData> GetStrategiesFromDB()
         {
-            return ConditionStrategiesData.ToList();
+            return ConditionStrategiesData.AsNoTracking().ToList();
         }
 
         public int GetStrategiesCountFromDB()
         {
-            return ConditionStrategiesData.Count();
+            return ConditionStrategiesData.AsNoTracking().Count();
         }
 
         public List<Score> GetScoresFromDB()
         {
-            return Scores.ToList();
+            return Scores.AsNoTracking().ToList();
         }
 
         public int GetBotRankingsCountFromDB()
@@ -103,8 +103,34 @@ namespace BotLib.Models
 
         public List<BotParametersRanking> GetBotRankingsFromDB()
         {
-            return BotParametersRankings.ToList();
+            return BotParametersRankings.AsNoTracking().ToList();
         }
+
+        public static T Execute<T>(Func<BotDBContext, T> func, bool executeAll = false)
+        {
+            foreach (var provider in providers)
+            {
+                using (BotDBContext brokerContext = (BotDBContext)provider.GetDBContext())
+                {
+                    if (executeAll)
+                    {
+                        func.Invoke(brokerContext);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            return func.Invoke(brokerContext);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
+                }
+            }
+            return default(T);
+        }
+
 
         ///////////////////////////////////////////////////////////////////
         //////////////////////// STATIC FUNCTIONS /////////////////////////

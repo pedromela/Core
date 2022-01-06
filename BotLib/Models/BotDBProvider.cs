@@ -21,14 +21,9 @@ namespace BotLib.Models
             return optionsBuilder;
         }
 
-        public override DbContext GetDBContext()
+        public override MyDbContext GetDBContext()
         {
             return new BotDBContext(settings.GetConnectionString(), (DbContextOptions<BotDBContext>)GetDbContextOptionsBuilder().Options);
-        }
-
-        public override string GetConnectionString()
-        {
-            return settings.GetConnectionString();
         }
     }
 }

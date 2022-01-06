@@ -13,6 +13,7 @@ using System.Linq;
 using UtilsLib.Utils;
 using BrokerLib.Exceptions;
 using BacktesterLib.Lib;
+using Microsoft.EntityFrameworkCore;
 
 namespace BotEngine.Bot
 {
@@ -148,7 +149,7 @@ namespace BotEngine.Bot
         public abstract TransactionType GetTransactionShortType();
         public abstract TransactionType GetTransactionLongCloseType();
         public abstract TransactionType GetTransactionShortCloseType();
-        public abstract void ProcessTransactions();
+        public abstract void ProcessTransactions(bool processBuyTypesTransactions = true);
         public abstract int ProcessCloseTransactions(Candle lastCandle, IEnumerable<Transaction> buyTransactions, IEnumerable<Transaction> sellTransactions);
 
 
@@ -349,6 +350,10 @@ namespace BotEngine.Bot
 
                 foreach (Trade trade in trades)
                 {
+                    if (trade.Market == null || _botParameters.Market == null || trade.Market != _botParameters.Market)
+                    {
+                        continue;
+                    }
                     if (!_tradesDict.ContainsKey(trade.Type))
                     {
                         _tradesDict.Add(trade.Type, new Dictionary<string, Trade>());
@@ -374,7 +379,7 @@ namespace BotEngine.Bot
                 {
                     using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
                     {
-                        return backtesterContext.BacktesterTransactions.Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).Count() > 0;
+                        return backtesterContext.BacktesterTransactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).Count() > 0;
                     }
                 }
                 else
@@ -402,7 +407,7 @@ namespace BotEngine.Bot
                     List<BacktesterTransaction> transactions = null;
                     using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
                     {
-                        transactions = backtesterContext.BacktesterTransactions.Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
+                        transactions = backtesterContext.BacktesterTransactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
                     }
                     return transactions;
                 }
@@ -417,7 +422,7 @@ namespace BotEngine.Bot
                             {
                                 using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
                                 {
-                                    transactions = brokerContext.Transactions.Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
+                                    transactions = brokerContext.Transactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
                                 }
                             }
                             catch (Exception)
@@ -830,7 +835,18 @@ namespace BotEngine.Bot
                 Trade trade = null;
 
                 Retry.Do(() => {
-                    trade = _broker.Order(transaction, ap, userBotRelation.DefaultTransactionAmount);
+                    try
+                    {
+                        trade = _broker.Order(transaction, ap, userBotRelation.DefaultTransactionAmount);
+                    }
+                    catch (InsufficientFundsException)
+                    {
+                        BotEngine.DebugMessage(String.Format("BotBase::UserOrder() : trade not valid."));
+                    }
+                    catch (MarginAccountNotFoundException) 
+                    {
+                        BotEngine.DebugMessage(String.Format("BotBase::UserOrder() : trade not valid."));
+                    }
                 }, TimeSpan.FromSeconds(1));
 
                 if (trade == null)
@@ -970,15 +986,24 @@ namespace BotEngine.Bot
             {
                 if (!_backtest)
                 {
-                    List<Trade> trades = _tradesDict[t.Type].Values.Where(m => m.TransactionId == t.id && m.Type == t.Type).ToList();
-
-                    foreach (Trade trade in trades)
+                    if (_tradesDict.ContainsKey(t.Type))
                     {
-                        CloseTrade(trade, t, description);
+                        List<Trade> trades = _tradesDict[t.Type].Values.Where(m => m.TransactionId == t.id && m.Type == t.Type).ToList();
+
+                        foreach (Trade trade in trades)
+                        {
+                            CloseTrade(trade, t, description);
+                        }
                     }
                 }
-                StoreSellOrderTransaction(t, _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame), description);
-                return true;
+                if (!IsTransactionBuyTypes(t.Type))
+                {
+                    int idebug = 0;
+                }
+
+                Transaction closeTransaction = StoreSellOrderTransaction(t, _signalsEngine.GetCurrentCandle(TimeFrames.M1), description);
+                
+                return closeTransaction == null ? false : true;
             }
             catch (Exception e)
             {
@@ -1029,7 +1054,7 @@ namespace BotEngine.Bot
                     List<UserBotRelation> userBotRelations = null;
                     using (BotDBContext botContext = BotDBContext.newDBContextClient())
                     {
-                        userBotRelations = botContext.UserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
+                        userBotRelations = botContext.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
                     }
                     Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
 
@@ -1233,7 +1258,7 @@ namespace BotEngine.Bot
                     List<Transaction> transactions;
                     using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
                     {
-                        transactions = brokerContext.Transactions.Where(t => t.BotId == _botParameters.id && t.Type.Equals("smartsell")).ToList();
+                        transactions = brokerContext.Transactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals("smartsell")).ToList();
                     }
                     foreach (var t in transactions)
                     {
@@ -1278,7 +1303,7 @@ namespace BotEngine.Bot
                     Score score;
                     using (BotDBContext botContext = BotDBContext.newDBContext())
                     {
-                        score = botContext.Scores.Single(m => m.BotParametersId == _botParameters.id);
+                        score = botContext.Scores.AsNoTracking().Single(m => m.BotParametersId == _botParameters.id);
                     }
 
                     BotEngine.DebugMessage("Win rate:" + (score.Positions > 0 ? score.Successes / score.Positions : 0));
@@ -1368,7 +1393,7 @@ namespace BotEngine.Bot
                         UserBotRelation userBotRelation = null;
                         using (BotDBContext botContext = BotDBContext.newDBContextClient())
                         {
-                            userBotRelation = botContext.UserBotRelations.SingleOrDefault(m => m.BotId == _botParameters.id);
+                            userBotRelation = botContext.UserBotRelations.AsNoTracking().SingleOrDefault(m => m.BotId == _botParameters.id);
                         }
                         Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
                         try
@@ -1382,7 +1407,7 @@ namespace BotEngine.Bot
                     }
                     else if (IsTransactionSellTypes(t.Type))
                     {
-                        trade = _tradesDict[t.Type].Values.SingleOrDefault(m => m.BuyTradeId == t.id);
+                        trade = _tradesDict[t.Type].Values.SingleOrDefault(m => m.BuyTradeId == t.BuyTradeId);
 
                         CloseTrade(trade, transaction, transaction.States + ";ERROR");
                     }
@@ -1589,7 +1614,7 @@ namespace BotEngine.Bot
                 {
                     using (var context = BacktesterDBContext.newDBContext())
                     {
-                        _score = context.BacktesterScores.SingleOrDefault(s => s.BotParametersId == _botParameters.id);
+                        _score = context.BacktesterScores.AsNoTracking().SingleOrDefault(s => s.BotParametersId == _botParameters.id);
                         if (_score == null)
                         {
                             _score = new BacktesterScore();
@@ -1608,7 +1633,7 @@ namespace BotEngine.Bot
                 {
                     using (var context = BotDBContext.newDBContext())
                     {
-                        _score = context.Scores.SingleOrDefault(s => s.BotParametersId == _botParameters.id);
+                        _score = context.Scores.AsNoTracking().SingleOrDefault(s => s.BotParametersId == _botParameters.id);
                         if (_score == null)
                         {
                             _score = new Score();
@@ -1653,7 +1678,6 @@ namespace BotEngine.Bot
                 {
                     _score.MaxDrawBack = _score.CurrentProfit;
                 }
-                _score.Update();
             }
             catch (Exception e)
             {
@@ -1673,11 +1697,11 @@ namespace BotEngine.Bot
                 {
                     if (botParameters.BrokerType.Equals(BrokerType.exchange))
                     {
-                        return new Bot(botParameters, backtest);
+                        return new ExchangeBot(botParameters, backtest);
                     }
                     else if (botParameters.BrokerType.Equals(BrokerType.margin))
                     {
-                        return new CFDBot(botParameters, backtest);
+                        return new MarginBot(botParameters, backtest);
                     }
                     else if (botParameters.BrokerType.Equals(BrokerType.exchange_dev))
                     {
@@ -1765,7 +1789,7 @@ namespace BotEngine.Bot
 
                 using (BotDBContext context = BotDBContext.newDBContext())
                 {
-                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.Count(), strategyId);
+                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), strategyId);
                 }
                 if (save)
                 {
@@ -1802,7 +1826,7 @@ namespace BotEngine.Bot
 
                 using (BotDBContext context = BotDBContext.newDBContext())
                 {
-                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.Count(), timeFrame, market, brokerDescription, strategyId);
+                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), timeFrame, market, brokerDescription, strategyId);
                 }
                 if (save)
                 {
@@ -1837,7 +1861,7 @@ namespace BotEngine.Bot
 
                 using (BotDBContext context = BotDBContext.newDBContext())
                 {
-                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.Count(), timeFrame, market, brokerDescription, strategyId);
+                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), timeFrame, market, brokerDescription, strategyId);
                 }
                 if (save)
                 {

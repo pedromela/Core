@@ -3,6 +3,7 @@ using BotLib.Models;
 using BrokerLib.Brokers;
 using BrokerLib.Market;
 using BrokerLib.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SignalsEngine.Indicators;
 using SignalsEngine.Strategys;
@@ -42,24 +43,27 @@ namespace BotEngine
                     o.OnNext(0);
                     BotDBContext.InitProviders();
                     BrokerDBContext.InitProviders();
-                    foreach (var provider in BrokerDBContext.providers)
+                    BrokerDBContext.Execute((brokerContext) => 
                     {
-                        using (BrokerDBContext brokerContext = (BrokerDBContext)provider.GetDBContext())
+                        if (brokerContext.GetAccessPointsCountFromDB() == 0)
                         {
-                            if (brokerContext.GetAccessPointsCountFromDB() == 0)
-                            {
-                                AccessPoint ap = new AccessPoint();
-                                ap.Account = "001-004-5079852-001";
-                                ap.BearerToken = "9ed78c473d719960490b47ba40737394-82f905244392e3832ccb565ba07d90c1";
-                                ap.id = "1";
-                                ap.UserId = "9cd94fe9-d439-4883-b508-058e02758e5d";
-                                ap.BrokerId = 1;
-                                //ap.id = Guid.NewGuid().ToString();
-                                brokerContext.AccessPoints.Add(ap);
-                                brokerContext.SaveChanges();
-                            }
+                            AccessPoint ap = new AccessPoint();
+                            ap.Account = "001-004-5079852-001";
+                            ap.BearerToken = "9ed78c473d719960490b47ba40737394-82f905244392e3832ccb565ba07d90c1";
+                            ap.id = "1";
+                            ap.UserId = "9cd94fe9-d439-4883-b508-058e02758e5d";
+                            ap.BrokerId = 1;
+                            //ap.id = Guid.NewGuid().ToString();
+                            brokerContext.AccessPoints.Add(ap);
+                            return brokerContext.SaveChanges();
                         }
-                    }
+                        return 0;
+                    }, true);
+
+                    CleanUnusedData();
+
+                    o.OnNext(10);
+
                     List<BotParameters> botsParametersList;
                     List<BotParameters> botsParametersListNotValid;
                     using (BotDBContext botContext = BotDBContext.newDBContext())
@@ -101,29 +105,27 @@ namespace BotEngine
                         }
                     }
 
-                    o.OnNext(10);
+                    o.OnNext(20);
 
                     for (int i = 0; i < botsParametersList.Count; i++)
                     {
                         botsParametersList[i].BrokerDescription = new BrokerDescription(botsParametersList[i].BrokerId, botsParametersList[i].BrokerType);
                     }
 
-                    o.OnNext(20);
+                    o.OnNext(30);
 
                     Dictionary<BrokerDescription, List<string>> activeBrokerMarketStringsDict = GetActiveBrokerMarketStringsDict(botsParametersList);
                     Broker.InitBrokers(activeBrokerMarketStringsDict);
-                    foreach (var provider in BrokerDBContext.providers)
+                    BrokerDBContext.Execute((brokerContext) => 
                     {
-                        using (BrokerDBContext brokerContext = (BrokerDBContext)provider.GetDBContext())
+                        if (brokerContext.GetActiveMarketsCountFromDB() > 0)
                         {
-                            if (brokerContext.GetActiveMarketsCountFromDB() > 0)
-                            {
-                                brokerContext.DeleteActiveMarketsFromDB();
-                            }
+                            brokerContext.DeleteActiveMarketsFromDB();
                         }
-                    }
+                        return 0;
+                    }, true);
 
-                    o.OnNext(30);
+                    o.OnNext(40);
 
                     List<ActiveMarket> markets = new List<ActiveMarket>();
                     int id = 0;
@@ -143,12 +145,12 @@ namespace BotEngine
                         }
                     }
 
-                    o.OnNext(40);
+                    o.OnNext(50);
 
                     Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = GetActiveBrokerMarketsDict(botsParametersList);
                     IndicatorsSharedData.InitInstance(activeBrokerMarketsDict);
 
-                    o.OnNext(50);
+                    o.OnNext(60);
 
                     foreach (var pair in activeBrokerMarketsDict)
                     {
@@ -166,11 +168,11 @@ namespace BotEngine
                         }
                     }
 
-                    o.OnNext(60);
+                    o.OnNext(70);
 
                     WaitForFirstCandles();
 
-                    o.OnNext(70);
+                    o.OnNext(80);
 
                     if (botsParametersList.Count > 0)
                     {
@@ -179,37 +181,58 @@ namespace BotEngine
 
                         using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
                         {
-                            activeTransactions = brokerContext.Transactions.Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
-                            activeTrades = brokerContext.Trades.Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
+                            activeTransactions = brokerContext.Transactions.AsNoTracking().Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
+                            activeTrades = brokerContext.Trades.AsNoTracking().Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
                         }
+
+                        Task[] loadingTaks = new Task[botsParametersList.Count()];
+                        int i = 0;
+
                         foreach (BotParameters botParameters in botsParametersList)
                         {
-                            Broker broker = Broker.DecideBroker(botParameters.BrokerDescription);
-                            MarketDescription marketDescription = new MarketDescription(botParameters.Market, broker.GetMarketType(), broker.GetBrokerType());
-                            MarketInfo marketInfo = IndicatorsSharedData.Instance.GetMarketInfo(marketDescription, botParameters.TimeFrame);
-                            if (marketInfo == null || !botParameters.ValidStart(marketInfo))
+                            loadingTaks[i++] = Task.Run(() =>
                             {
-                                DebugMessage("TradingEngine::Init() : bot " + botParameters.id + " start validation failed.");
-                                continue;
-                            }
+                                Broker broker = Broker.DecideBroker(botParameters.BrokerDescription);
+                                MarketDescription marketDescription = new MarketDescription(botParameters.Market, broker.GetMarketType(), broker.GetBrokerType());
+                                MarketInfo marketInfo = IndicatorsSharedData.Instance.GetMarketInfo(marketDescription, botParameters.TimeFrame);
+                                if (marketInfo == null || !botParameters.ValidStart(marketInfo))
+                                {
+                                    DebugMessage("TradingEngine::Init() : bot " + botParameters.id + " start validation failed.");
+                                    return;
+                                }
 
-                            BotBase bot = BotBase.GenerateBotFromParameters(botParameters);
-                            bot.InitTransactionsToBeProcessed(activeTransactions.Where(m => m.BotId == bot._botParameters.id));
-                            bot.InitTradesToBeProcessed(activeTrades);
-                            if (!_botDict.ContainsKey(botParameters.TimeFrame))
-                            {
-                                _botDict.Add(botParameters.TimeFrame, new Dictionary<string, BotBase>());
-                            }
+                                BotBase bot = BotBase.GenerateBotFromParameters(botParameters);
+                                var botTransactions = activeTransactions.Where(m => m.BotId == bot._botParameters.id);
+                                bot.InitTransactionsToBeProcessed(botTransactions);
+                                var botTransactionIds = botTransactions.Select(m => m.id);
+                                var botTrades = activeTrades.Where(m => botTransactionIds.Contains(m.TransactionId)).ToList();
+                                bot.InitTradesToBeProcessed(botTrades);
+                                if (!_botDict.ContainsKey(botParameters.TimeFrame))
+                                {
+                                    if (Enum.IsDefined(typeof(TimeFrames), bot._botParameters.TimeFrame))
+                                    {
+                                        _botDict.Add(botParameters.TimeFrame, new Dictionary<string, BotBase>());
+                                    }
+                                    else
+                                    {
+                                        DebugMessage("TradingEngine::Init() : bot " + botParameters.id + " TimeFrame is invalid.");
+                                    }
+                                }
 
-                            _botDict[botParameters.TimeFrame].Add(botParameters.id, bot);
-                            DebugMessage(String.Format("TradingEngine::Init() : Adding bot {1}/{0}", botParameters.id, botParameters.BotName));
-
+                                _botDict[botParameters.TimeFrame].Add(botParameters.id, bot);
+                                DebugMessage(String.Format("TradingEngine::Init() : Adding bot {1}/{0}", botParameters.id, botParameters.BotName));
+                            });
                         }
 
-                        //SelectRealBot();
+                        Task.WaitAll(loadingTaks);
+
+                        foreach (var task in loadingTaks)
+                        {
+                            task.Dispose();
+                        }
                     }
 
-                    o.OnNext(80);
+                    o.OnNext(90);
 
                     using (BotDBContext botContext = BotDBContext.newDBContext())
                     {
@@ -217,10 +240,6 @@ namespace BotEngine
                     }
                     var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
                     Configuration = builder.Build();
-
-                    o.OnNext(90);
-
-                    CleanUnusedData();
 
                     o.OnNext(100);
                     o.OnCompleted();

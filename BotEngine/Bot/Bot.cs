@@ -5,6 +5,7 @@ using BotLib.Models;
 using BrokerLib.Models;
 using static BrokerLib.BrokerLib;
 using TelegramLib.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BotEngine.Bot
 {
@@ -49,7 +50,7 @@ namespace BotEngine.Bot
             return _botParameters.InvertBaseCurrency ? TransactionType.buyclose : TransactionType.sellclose;
         }
 
-        public override void ProcessTransactions()
+        public override void ProcessTransactions(bool processBuyTypesTransactions = true)
         {
             try
             {
@@ -331,7 +332,7 @@ namespace BotEngine.Bot
                     List<UserBotRelation> userBotRelations = null;
                     using (var context = BotDBContext.newDBContextClient())
                     {
-                        userBotRelations = context.UserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
+                        userBotRelations = context.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
                     }
 
                     Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
@@ -357,7 +358,7 @@ namespace BotEngine.Bot
                     List<UserBotRelation> userBotRelations = null;
                     using (var context = BotDBContext.newDBContextClient())
                     {
-                        userBotRelations = context.UserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
+                        userBotRelations = context.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
                     }
 
                     transaction.Type = BrokerLib.BrokerLib.CloseTransactionType(transaction.Type);

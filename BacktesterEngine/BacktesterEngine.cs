@@ -17,6 +17,7 @@ using TelegramEngine.Telegram.Channels;
 using SignalsEngine.Indicators;
 using BrokerLib.Market;
 using BacktesterLib.Lib;
+using Microsoft.EntityFrameworkCore;
 
 namespace BacktesterEngine
 {
@@ -185,7 +186,15 @@ namespace BacktesterEngine
                     BotBase bot = BotBase.GenerateBotFromParameters(botParameters, true);
                     if (!_botDict.ContainsKey(botParameters.TimeFrame))
                     {
-                        _botDict.Add(botParameters.TimeFrame, new Dictionary<string, BotBase>());
+                        if (Enum.IsDefined(typeof(TimeFrames), bot._botParameters.TimeFrame))
+                        {
+                            _botDict.Add(botParameters.TimeFrame, new Dictionary<string, BotBase>());
+                        }
+                        else
+                        {
+                            DebugMessage("BacktesterEngine::Init() : bot " + botParameters.id + " TimeFrame is invalid.");
+
+                        }
                     }
 
                     _botDict[botParameters.TimeFrame].Add(botParameters.id, bot);
@@ -501,7 +510,7 @@ namespace BacktesterEngine
                 {
                     foreach (BacktesterScore score in scores)
                     {
-                        if (!botContext.BotsParameters.Any(m => m.id == score.BotParametersId))
+                        if (!botContext.BotsParameters.AsNoTracking().Any(m => m.id == score.BotParametersId))
                         {
                             scoresToRemove.Add(score);
                         }
@@ -513,7 +522,7 @@ namespace BacktesterEngine
                 {
                     foreach (BacktesterTransaction transaction in transactions)
                     {
-                        if (!botContext.BotsParameters.Any(m => m.id == transaction.BotId))
+                        if (!botContext.BotsParameters.AsNoTracking().Any(m => m.id == transaction.BotId))
                         {
                             transactionsToRemove.Add(transaction);
                         }

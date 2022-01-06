@@ -21,14 +21,9 @@ namespace BrokerLib.Models
             return optionsBuilder;
         }
 
-        public override DbContext GetDBContext()
+        public override MyDbContext GetDBContext()
         {
             return new BrokerDBContext(settings.GetConnectionString(), (DbContextOptions<BrokerDBContext>)GetDbContextOptionsBuilder().Options);
-        }
-
-        public override string GetConnectionString()
-        {
-            return settings.GetConnectionString();
         }
     }
 }

@@ -44,7 +44,7 @@ namespace BotEngine.Bot
             return TransactionType.sellclose;
         }
 
-        public override void ProcessTransactions()
+        public override void ProcessTransactions(bool processBuyTypesTransactions = true)
         {
             try
             {
@@ -60,7 +60,7 @@ namespace BotEngine.Bot
                     buyTransactions = buyTransactions != null ? buyTransactions : new List<Transaction>();
                     sellTransactions = sellTransactions != null ? sellTransactions : new List<Transaction>();
 
-                    if (ProcessCloseTransactions(lastCandle, buyTransactions, sellTransactions) == 0)
+                    if (ProcessCloseTransactions(lastCandle, buyTransactions, sellTransactions) == 0 && processBuyTypesTransactions)
                     {
                         ProcessTransactions(lastCandle, buyTransactions, sellTransactions);
                     }
@@ -84,8 +84,10 @@ namespace BotEngine.Bot
             try
             {
                 int countSells = 0;
-                CurrentProfits currentProfits = GetAllProfits(lastCandle, sellTransactions, ref countSells);
-                currentProfits = currentProfits + GetAllProfits(lastCandle, buyTransactions, ref countSells);
+                CurrentProfits currentProfitsSell = GetAllProfits(lastCandle, sellTransactions, ref countSells);
+                CurrentProfits currentProfitsBuy = GetAllProfits(lastCandle, buyTransactions, ref countSells);
+
+                CurrentProfits currentProfits = currentProfitsSell + currentProfitsBuy;
 
                 StoreScore(true, 0.0f, true, currentProfits);
 

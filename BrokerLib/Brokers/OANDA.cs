@@ -296,6 +296,10 @@ namespace BrokerLib.Brokers
                             tradeID = item.tradeID;
                         }
                     }
+                    else if (orderFillTransaction.tradeReduced != null)
+                    {
+                        tradeID = orderFillTransaction.tradeReduced.tradeID;
+                    }
                     else 
                     {
                         throw new TradeErrorException(String.Format("OANDA::Order() : Trade cancelled, reason: {0}", "orderFillTransaction was null!"));
@@ -400,15 +404,14 @@ namespace BrokerLib.Brokers
 
             TransactionType transactionType = transaction.Type;
             TransactionType tradeTansactionType = BrokerLib.CloseTransactionType(transaction.Type);
-
-            transaction.Type = tradeTansactionType;
+            Transaction closetransaction = new Transaction(transaction);
+            closetransaction.Type = tradeTansactionType;
 
             Trade closetrade = Order(transaction, accessPoint, trade.Amount);
             if (closetrade == null)
             {
                 int idebug = 0;
             }
-            transaction.Type = BrokerLib.OppositeTransactionType(transaction.Type);
 
             return closetrade;
         }

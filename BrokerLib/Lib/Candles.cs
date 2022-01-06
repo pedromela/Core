@@ -7,6 +7,7 @@ using BrokerLib.Models;
 using BrokerLib.Lib;
 using BrokerLib.Brokers;
 using BrokerLib.Market;
+using Microsoft.EntityFrameworkCore;
 
 namespace BrokerLib.Lib
 {
@@ -318,7 +319,7 @@ namespace BrokerLib.Lib
             {
                 using (BrokerDBContext dataContext = BrokerDBContext.newDBContext())
                 {
-                    if (dataContext.Candles.Any(m => m.TimeFrame.Equals(timeFrame) &&
+                    if (dataContext.Candles.AsNoTracking().Any(m => m.TimeFrame.Equals(timeFrame) &&
                                              m.Timestamp >= fromDate &&
                                              m.Timestamp <= toDate))
                     {
@@ -356,7 +357,7 @@ namespace BrokerLib.Lib
             {
                 using (BrokerDBContext dataContext = BrokerDBContext.newDBContext())
                 {
-                    List<Candle> candlesFromDB = dataContext.Candles.Where(m => m.TimeFrame.Equals(timeFrame) &&
+                    List<Candle> candlesFromDB = dataContext.Candles.AsNoTracking().Where(m => m.TimeFrame.Equals(timeFrame) &&
                                                           m.Timestamp >= fromDate &&
                                                           m.Timestamp <= toDate).ToList();
                 }

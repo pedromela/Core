@@ -8,7 +8,7 @@ using static BrokerLib.BrokerLib;
 
 namespace BrokerLib.Models
 {
-    public class BrokerDBContext : DbContext
+    public class BrokerDBContext : MyDbContext
     {
         public DbSet<Point> Points { get; set; }
         public DbSet<Candle> Candles { get; set; }
@@ -71,12 +71,12 @@ namespace BrokerLib.Models
 
         public List<ActiveMarket> GetActiveMarketsFromDB()
         {
-            return ActiveMarkets.ToList();
+            return ActiveMarkets.AsNoTracking().ToList();
         }
 
         public int GetActiveMarketsCountFromDB()
         {
-            return ActiveMarkets.Count();
+            return ActiveMarkets.AsNoTracking().Count();
         }
 
         public void DeleteActiveMarketsFromDB()
@@ -87,21 +87,21 @@ namespace BrokerLib.Models
 
         public List<Trade> GetTradesFromDB()
         {
-            return Trades.ToList();
+            return Trades.AsNoTracking().ToList();
         }
 
         public List<Equity> GetEquitiesFromDB()
         {
-            return Equitys.ToList();
+            return Equitys.AsNoTracking().ToList();
         }
         public List<Transaction> GetTransactionsFromDB()
         {
-            return Transactions.ToList();
+            return Transactions.AsNoTracking().ToList();
         }
 
         public List<AccessPoint> GetAccessPointsFromDB()
         {
-            return AccessPoints.ToList();
+            return AccessPoints.AsNoTracking().ToList();
         }
 
         public void DeleteAccessPointsFromDB()
@@ -112,9 +112,8 @@ namespace BrokerLib.Models
 
         public int GetAccessPointsCountFromDB()
         {
-            return AccessPoints.Count();
+            return AccessPoints.AsNoTracking().Count();
         }
-
 
         public List<Candle> GetCandlesFromDB(TimeFrames timeFrame, string market, DateTime fromDate, DateTime toDate)
         {
@@ -145,6 +144,31 @@ namespace BrokerLib.Models
                 BrokerLib.DebugMessage(e);
             }
             return null;
+        }
+
+        public static T Execute<T>(Func<BrokerDBContext, T> func, bool executeAll = false)
+        {
+            foreach (var provider in providers)
+            {
+                using (BrokerDBContext brokerContext = (BrokerDBContext)provider.GetDBContext())
+                {
+                    if (executeAll)
+                    {
+                        func.Invoke(brokerContext);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            return func.Invoke(brokerContext);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
+                }
+            }
+            return default(T);
         }
 
         ///////////////////////////////////////////////////////////////////

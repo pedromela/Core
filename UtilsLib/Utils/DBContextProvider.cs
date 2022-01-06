@@ -18,14 +18,14 @@ namespace UtilsLib.Utils
             throw new NotImplementedException();
         }
 
-        public virtual DbContext GetDBContext() 
+        public virtual MyDbContext GetDBContext() 
         {
             throw new NotImplementedException();
         }
 
-        public virtual string GetConnectionString()
+        public string GetConnectionString()
         {
-            throw new NotImplementedException();
+            return settings.GetConnectionString();
         }
     }
 }

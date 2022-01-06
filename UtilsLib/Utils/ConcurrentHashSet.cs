@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace UtilsLib.Utils
@@ -55,6 +56,32 @@ namespace UtilsLib.Utils
             try
             {
                 return _hashSet.Remove(item);
+            }
+            finally
+            {
+                if (_lock.IsWriteLockHeld) _lock.ExitWriteLock();
+            }
+        }
+
+        public T[] ToArray()
+        {
+            _lock.EnterWriteLock();
+            try
+            {
+                return _hashSet.ToArray();
+            }
+            finally
+            {
+                if (_lock.IsWriteLockHeld) _lock.ExitWriteLock();
+            }
+        }
+
+        public List<T> ToList()
+        {
+            _lock.EnterWriteLock();
+            try
+            {
+                return _hashSet.ToList();
             }
             finally
             {
