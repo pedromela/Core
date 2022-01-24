@@ -59,6 +59,11 @@ namespace SignalsEngine.Indicators
             this.Special = Special;
         }
 
+        protected string GetDescription() 
+        {
+            return ShortName + ":" + MarketInfo.GetMarket() + ":" + TimeFrame.ToString();
+        }
+
         protected string GetShorDescriptionName() 
         {
             try

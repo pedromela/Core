@@ -9,6 +9,7 @@ namespace UtilsLib.Utils
     {
         private static Dictionary<string, int> myStaticFieldDict = new Dictionary<string, int>();
         private static Dictionary<string, ConcurrentHashSet<MyDbContext>> StaticCurrentContexts = new Dictionary<string, ConcurrentHashSet<MyDbContext>>();
+        private static Dictionary<string, Dictionary<string, ConcurrentHashSet<DBModelBase>>> StaticRetryDict = new Dictionary<string, Dictionary<string, ConcurrentHashSet<DBModelBase>>>();
 
         public int ContextCount
         {
@@ -22,6 +23,28 @@ namespace UtilsLib.Utils
             set
             {
                 myStaticFieldDict[this.GetType().Name] = value;
+            }
+        }
+
+        public Dictionary<string, ConcurrentHashSet<DBModelBase>> RetryDict
+        {
+            get
+            {
+                if (StaticRetryDict.ContainsKey(GetType().Name))
+                {
+                    return StaticRetryDict[GetType().Name];
+                }
+                else
+                {
+                    var dict = new Dictionary<string, ConcurrentHashSet<DBModelBase>>();
+                    StaticRetryDict.Add(GetType().Name, dict);
+                    return dict;
+                }
+            }
+
+            set
+            {
+                StaticRetryDict[this.GetType().Name] = value;
             }
         }
 

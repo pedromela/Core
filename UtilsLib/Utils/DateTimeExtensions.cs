@@ -8,7 +8,11 @@ namespace UtilsLib.Utils
         {
             date = date.AddSeconds(-date.Second);
             date = date.AddMilliseconds(-date.Millisecond);
-            date = date.AddMinutes(timeFrame - date.Minute % timeFrame);
+            if (timeFrame != 1)
+            {
+                date = date.AddMinutes(timeFrame - date.Minute % timeFrame);
+            }
+            date = date.AddTicks(-(date.Ticks % 10000));
             return date;
         }
 

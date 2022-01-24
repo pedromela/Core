@@ -15,6 +15,11 @@ namespace UtilsLib.Utils
 
         public void Debug(MyDbContext context) 
         {
+            var name = GetType().Name;
+            if (context.RetryDict.ContainsKey(name))
+            {
+                context.RetryDict[name].Add(this);
+            }
             UtilsLib.DebugMessage(
                 String.Format(
                     "{0}.{1} has {2}/{3} contexts active. {4}",

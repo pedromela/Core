@@ -676,7 +676,6 @@ namespace SignalsEngine.Indicators
             {
                 Dictionary<string, Indicator> indicators = new Dictionary<string, Indicator>();
 
-
                 Indicator vwap = new VWAP(3, timeFrame, null);
                 indicators.Add(vwap.ShortName, vwap);
 
@@ -711,13 +710,20 @@ namespace SignalsEngine.Indicators
                 indicators.Add(momentum12.ShortName, momentum12);
 
                 Indicator psar200 = new ParabolicSAR(200, 0.02f, 0.02f, 0.2f, timeFrame, null);
-                psar200.Store = true;
                 indicators.Add(psar200.ShortName, psar200);
 
                 Indicator adx14 = new ADX(14, timeFrame, null);
-                adx14.Store = true;
                 indicators.Add(adx14.ShortName, adx14);
 
+                Indicator changePoint200 = new ChangePoint(200, timeFrame, null);
+                indicators.Add(changePoint200.ShortName, changePoint200);
+
+                if (timeFrame == TimeFrames.D1)
+                {
+                    Indicator fearGreed = new FearGreed(200, timeFrame, null);
+                    fearGreed.Store = true;
+                    indicators.Add(fearGreed.ShortName, fearGreed);
+                }
 
                 return indicators;
             }
@@ -733,7 +739,6 @@ namespace SignalsEngine.Indicators
             try
             {
                 Dictionary<string, Indicator> indicators = new Dictionary<string, Indicator>();
-
 
                 Indicator vwap = new VWAP(3, timeFrame, marketInfo);
                 vwap.Store = true;
@@ -839,6 +844,17 @@ namespace SignalsEngine.Indicators
                 Indicator adx14 = new ADX(14, timeFrame, marketInfo);
                 adx14.Store = true;
                 indicators.Add(adx14.ShortName, adx14);
+
+                Indicator changePoint200 = new ChangePoint(200, timeFrame, marketInfo);
+                changePoint200.Store = true;
+                indicators.Add(changePoint200.ShortName, changePoint200);
+
+                if (timeFrame == TimeFrames.D1)
+                {
+                    Indicator fearGreed = new FearGreed(200, timeFrame, marketInfo);
+                    fearGreed.Store = true;
+                    indicators.Add(fearGreed.ShortName, fearGreed);
+                }
 
                 //Indicator price = new Price("price", 200, timeFrame);
                 //indicators.Add(price.ShortName, price);

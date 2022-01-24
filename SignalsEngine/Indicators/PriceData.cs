@@ -87,7 +87,7 @@ namespace SignalsEngine.Indicators
                         }
                     }
                     first = false;
-                    AddLastValue(lastCandle);
+                    AddLastValues(lastCandle);
                     //lastCandle.Store();
 
                 }
@@ -138,7 +138,7 @@ namespace SignalsEngine.Indicators
                                                 _lastCandle.Timestamp));
                     return false;
                 }
-                AddLastValue(lastCandle);
+                AddLastValues(lastCandle);
                 lastCandle.Store();
 
             }
@@ -148,6 +148,39 @@ namespace SignalsEngine.Indicators
             _timeSeriesDay.CalculateNext(this);
 
             return true;
+        }
+
+        public void AddLastValues(Candle lastCandle)
+        {
+            try
+            {
+                Dictionary<string, Candle> valueList = new Dictionary<string, Candle>();
+                Candle candle = new Candle();
+                candle.Close = lastCandle.Close;
+                candle.Timestamp = lastCandle.Timestamp;
+                valueList.Add("middle", candle);
+
+                candle = new Candle();
+                candle.Min = lastCandle.Min;
+                candle.Timestamp = lastCandle.Timestamp;
+                valueList.Add("min", candle);
+
+                candle = new Candle();
+                candle.Max = lastCandle.Max;
+                candle.Timestamp = lastCandle.Timestamp;
+                valueList.Add("max", candle);
+
+                candle = new Candle();
+                candle.Open = lastCandle.Open;
+                candle.Timestamp = lastCandle.Timestamp;
+                valueList.Add("open", candle);
+
+                AddLastValue(valueList);
+            }
+            catch (Exception e)
+            {
+                SignalsEngine.DebugMessage(e);
+            }
         }
 
         ///////////////////////////////////////////////////////

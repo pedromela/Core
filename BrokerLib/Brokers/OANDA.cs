@@ -138,7 +138,7 @@ namespace BrokerLib.Brokers
                     candle.Close = c.mid.c;
                     candle.Max = c.mid.h;
                     candle.Min = c.mid.l;
-                    candle.TimeFrame =(TimeFrames) Enum.Parse(typeof(TimeFrames), granularity);
+                    candle.TimeFrame = granularity == "D" ? TimeFrames.D1 : (TimeFrames) Enum.Parse(typeof(TimeFrames), granularity);
                     candle.Symbol = instrument.Replace("_", "");
                     candle.Volume = c.volume;
                     convertedCandleList.Add(candle);
@@ -478,7 +478,8 @@ namespace BrokerLib.Brokers
             try
             {
                 market = ParseMarket(market);
-                string url = String.Format(_url + "instruments/" + market + "/candles/?count={0}&granularity={1}", lastCount, timeFrame.ToString());
+                string timeFrameStr = timeFrame == TimeFrames.D1 ? timeFrame.ToString().Substring(0, 1) : timeFrame.ToString();
+                string url = String.Format(_url + "instruments/" + market + "/candles/?count={0}&granularity={1}", lastCount, timeFrameStr);
                 string response = Request.Get(url, _defaultAccessPoint.BearerToken, AuthTypes.BearerToken);
                 OANDACandles candles = JsonConvert.DeserializeObject<OANDACandles>(response);
                 return candles.ConvertToCandleList();
@@ -518,9 +519,10 @@ namespace BrokerLib.Brokers
                 {
                     remaining = 0;
                 }
+                string timeFrameStr = timeFrame == TimeFrames.D1 ? timeFrame.ToString().Substring(0, 1) : timeFrame.ToString();
                 string date = fromDate.ToString("o", DateTimeFormatInfo.InvariantInfo);
                 //string date = String.Format("{0} {1}:00.0Z", fromDate.ToShortDateString().Replace("/", "-"), fromDate.ToShortTimeString());
-                string url = String.Format(_url + "instruments/" + market + "/candles/?count={0}&granularity={1}&from={2}", count, timeFrame.ToString(), date);
+                string url = String.Format(_url + "instruments/" + market + "/candles/?count={0}&granularity={1}&from={2}", count, timeFrameStr, date);
                 string response = Request.Get(url, _defaultAccessPoint.BearerToken, AuthTypes.BearerToken);
                 OANDACandles candles = JsonConvert.DeserializeObject<OANDACandles>(response);
 

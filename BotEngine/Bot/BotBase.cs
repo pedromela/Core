@@ -931,7 +931,7 @@ namespace BotEngine.Bot
                     {
                         t.LastProfitablePrice = lastCandle.Close;
                     }
-                    if (lastCandle.Close <= t.LastProfitablePrice * (1.0f - _botParameters.TrailingStopValue))
+                    else if (lastCandle.Close <= t.LastProfitablePrice * (1.0f - _botParameters.TrailingStopValue))
                     {
                         CloseTrades(t, t.States + ";trailingstop");
                         return true;
@@ -943,7 +943,7 @@ namespace BotEngine.Bot
                     {
                         t.LastProfitablePrice = lastCandle.Close;
                     }
-                    if (lastCandle.Close >= t.LastProfitablePrice * (1.0f + _botParameters.TrailingStopValue))
+                    else if (lastCandle.Close >= t.LastProfitablePrice * (1.0f + _botParameters.TrailingStopValue))
                     {
                         CloseTrades(t, t.States + ";trailingstop");
                         return true;
@@ -984,6 +984,11 @@ namespace BotEngine.Bot
         {
             try
             {
+                if (!IsTransactionBuyTypes(t.Type))
+                {
+                    int idebug = 0;
+                }
+
                 if (!_backtest)
                 {
                     if (_tradesDict.ContainsKey(t.Type))
@@ -1211,9 +1216,9 @@ namespace BotEngine.Bot
                         if (_transactionsDict[key].ContainsKey(t.id))
                         {
                             Transaction t2 = _transactionsDict[key][t.id];
-                            if (t.Type != t2.Type)
+                            if (t2.Type != key)
                             {
-                                _transactionsDict[key].Remove(t.id);
+                                _transactionsDict[key].Remove(t2.id);
                             }
                         }
                     }

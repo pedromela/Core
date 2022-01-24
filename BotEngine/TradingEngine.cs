@@ -207,15 +207,18 @@ namespace BotEngine
                                 var botTransactionIds = botTransactions.Select(m => m.id);
                                 var botTrades = activeTrades.Where(m => botTransactionIds.Contains(m.TransactionId)).ToList();
                                 bot.InitTradesToBeProcessed(botTrades);
-                                if (!_botDict.ContainsKey(botParameters.TimeFrame))
+                                lock (_botDict)
                                 {
-                                    if (Enum.IsDefined(typeof(TimeFrames), bot._botParameters.TimeFrame))
+                                    if (!_botDict.ContainsKey(botParameters.TimeFrame))
                                     {
-                                        _botDict.Add(botParameters.TimeFrame, new Dictionary<string, BotBase>());
-                                    }
-                                    else
-                                    {
-                                        DebugMessage("TradingEngine::Init() : bot " + botParameters.id + " TimeFrame is invalid.");
+                                        if (Enum.IsDefined(typeof(TimeFrames), bot._botParameters.TimeFrame))
+                                        {
+                                            _botDict.Add(botParameters.TimeFrame, new Dictionary<string, BotBase>());
+                                        }
+                                        else
+                                        {
+                                            DebugMessage("TradingEngine::Init() : bot " + botParameters.id + " TimeFrame is invalid.");
+                                        }
                                     }
                                 }
 
@@ -438,6 +441,27 @@ namespace BotEngine
             {
                 DebugMessage(e);
             }
+        }
+
+        public List<BotBase> GetBots() 
+        {
+            try
+            {
+                var botList = new List<BotBase>();
+                foreach (TimeFrames timeFrame in Enum.GetValues(typeof(TimeFrames)))
+                {
+                    if (_botDict.ContainsKey(timeFrame))
+                    {
+                        botList.AddRange(_botDict[timeFrame].Values);
+                    }
+                }
+                return botList;
+            }
+            catch (Exception e)
+            {
+                DebugMessage(e);
+            }
+            return null;
         }
     }
 }

@@ -289,7 +289,17 @@ namespace BotEngine
                         }
                         else
                         {
-                            bot.ProcessTransactions(false);
+                            DateTime now = DateTimeExtensions.Normalize(DateTime.Now, (int) TimeFrames.M1);
+                            if (BotLib.BotLib.Backtest)
+                            {
+                                var lastCandle = _signalsEngineDict[bot._signalsEngineId].GetCurrentCandle(TimeFrames.M1);
+                                now = lastCandle.Timestamp;
+                            }
+                            int left = now.Minute % (int)bot._botParameters.TimeFrame;
+                            if (left != 1)
+                            {
+                                bot.ProcessTransactions(false);
+                            }
                         }
 
                         Profit profit = new Profit();
@@ -310,23 +320,67 @@ namespace BotEngine
                 loadingTaks = loadingTaks.Where(t => t != null).ToArray();
                 Task.WaitAll(loadingTaks);
 
-                BotDBContext.Execute((botContext) => 
-                {
-                    botContext.Scores.UpdateRange(botsList.Select(bot => bot._score));
-                    //await botContext.Profits.AddRangeAsync(profits.ToArray());
-                    botContext.SaveChanges();
-                    return 0;
-                }, true);
-
                 foreach (var task in loadingTaks)
                 {
                     task.Dispose();
+                }
+
+                if (timeFrame == TimeFrames.M1)
+                {
+                    BotDBContext.Execute((botContext) =>
+                    {
+                        try
+                        {
+                            var botList = GetBots();
+                            botContext.Scores.UpdateRange(botList.Select(bot => bot._score));
+                            var name = nameof(Profit);
+                            if (botContext.RetryDict.ContainsKey(name))
+                            {
+                                var profits = (Profit[])botContext.RetryDict[name].ToArray();
+                                botContext.Profits.AddRange(profits);
+                                botContext.RetryDict[name].Clear();
+                            }
+                            botContext.SaveChanges();
+                        }
+                        catch (Exception)
+                        {
+                            int idebug = 0;
+                        }
+                        return 0;
+                    }, true);
+                    BrokerDBContext.Execute((brokerContext) =>
+                    {
+                        try
+                        {
+                            var name = nameof(Transaction);
+                            if (brokerContext.RetryDict.ContainsKey(name))
+                            {
+                                var transactions = (Transaction[])brokerContext.RetryDict[name].ToArray();
+                                brokerContext.Transactions.AddRange(transactions);
+                                brokerContext.RetryDict[name].Clear();
+                            }
+                            name = nameof(Trade);
+                            if (brokerContext.RetryDict.ContainsKey(name))
+                            {
+                                var trades = (Trade[])brokerContext.RetryDict[name].ToArray();
+                                brokerContext.Trades.AddRange(trades);
+                                brokerContext.RetryDict[name].Clear();
+                            }
+                            brokerContext.SaveChanges();
+                        }
+                        catch (Exception)
+                        {
+                            int idebug = 0;
+                        }
+                        return 0;
+                    }, true);
                 }
 
                 lock (ready[timeFrame].Lock)
                 {
                     ready[timeFrame].Ready = true;
                 }
+
                 DebugMessage(String.Format("UpdateByTimeFrame({0}): COMPLETE {1}!", timeFrame, iteration));
             }
             catch (Exception e)
@@ -370,12 +424,21 @@ namespace BotEngine
 
                 if (string.IsNullOrEmpty(bot._signalsEngineId))
                 {
-                    DebugMessage("UpdateBots() : BotId._signalsEngineId is empty!");
+                    DebugMessage("CreateBot() : BotId._signalsEngineId is empty!");
                     return;
                 }
                 if (!_botDict.ContainsKey(bot._botParameters.TimeFrame) && Enum.IsDefined(typeof(TimeFrames), bot._botParameters.TimeFrame))
                 {
                     _botDict.Add(bot._botParameters.TimeFrame, new Dictionary<string, BotBase>());
+                }
+
+                foreach (TimeFrames timeFrame in Enum.GetValues(typeof(TimeFrames)))
+                {
+                    if (_botDict.ContainsKey(timeFrame) && _botDict[timeFrame].ContainsKey(bot._botParameters.id))
+                    {
+                        DebugMessage($"CreateBot() : A bot with botId {bot._botParameters.id} already exists in the botDict with TimeFrame {timeFrame}!");
+                        return;
+                    }
                 }
 
                 if (_botDict[bot._botParameters.TimeFrame].ContainsKey(bot._botParameters.id))

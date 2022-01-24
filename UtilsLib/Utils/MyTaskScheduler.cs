@@ -99,19 +99,6 @@ namespace UtilsLib.Utils
             }
         }
 
-        public void TaskOnlyOnce(Action task)
-        {
-            try
-            {
-                Task t = new Task(task);
-                t.Start();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
-
         public void ScheduleTaskOnlyOnce(Action task, int min, int second)
         {
             try
@@ -171,6 +158,7 @@ namespace UtilsLib.Utils
                 Console.WriteLine(e);
             }
         }
+
         public void ScheduleTaskDaily(Action task, string taskId, int hour = 0, int minute = 0, int second = 0)
         {
             try
@@ -213,6 +201,55 @@ namespace UtilsLib.Utils
                 {
                     task.Invoke();
                 }, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(milisecond));
+
+                if (timers.ContainsKey(taskId))
+                {
+                    timers[taskId].Dispose();
+                    timers[taskId] = timer;
+                }
+                else
+                {
+                    timers.Add(taskId, timer);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        public void ScheduleTaskInDueTimeOnlyOnce<T>(Action<T> task, T data, string taskId, TimeSpan dueTime)
+        {
+            try
+            {
+                var timer = new Timer(x =>
+                {
+                    task.Invoke(data);
+                }, null, dueTime, TimeSpan.Zero);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        public void ScheduleTaskPeriodically<T>(Action<T> task, T data, string taskId, TimeSpan period)
+        {
+            try
+            {
+                DateTime now = DateTime.UtcNow;
+                DateTime firstRun = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0);
+
+                if (now > firstRun)
+                {
+                    firstRun = now;
+                }
+                TimeSpan timeToGo = firstRun - now;
+
+                var timer = new Timer(x =>
+                {
+                    task.Invoke(data);
+                }, null, timeToGo, period);
 
                 if (timers.ContainsKey(taskId))
                 {

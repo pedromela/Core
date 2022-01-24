@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using UtilsLib.Utils;
 using static BrokerLib.BrokerLib;
 using static UtilsLib.Utils.Request;
 
@@ -364,14 +365,14 @@ namespace BrokerLib.Brokers
         {
             try
             {
-                DateTime _fromDate = fromDate;
-                DateTime _toDate = toDate;
+                DateTime _fromDate = DateTimeExtensions.Normalize(fromDate, (int) timeFrame);
+                DateTime _toDate = DateTimeExtensions.Normalize(toDate, (int) timeFrame);
                 List<Candle> candleList = new List<Candle>();
                 double period = (toDate - fromDate).TotalMinutes / (int)timeFrame;
 
                 if (period < 10)
                 {
-                    BrokerLib.DebugMessage("GetCandles() : missing period is too short. continue...");
+                    BrokerLib.DebugMessage("GetCandles() : Requested time span is too short. Continue...");
                     return candleList;
                 }
 
@@ -406,7 +407,18 @@ namespace BrokerLib.Brokers
                                 _fromDate = _toDate;
                                 break;
                             }
-
+                            if (candleList.Count > 0)
+                            {
+                                Candle lastCandle = candleList.Last();
+                                DateTime now = DateTimeExtensions.Normalize(DateTime.Now, (int)timeFrame).AddMinutes(-(int)timeFrame);
+                                if (_toDate > now &&
+                                    candle.Timestamp >= lastCandle.Timestamp &&
+                                    candle.Timestamp == now)
+                                {
+                                    _fromDate = _toDate;
+                                    break;
+                                }
+                            }
                             candleList.Add(candle);
 
                         }
@@ -419,7 +431,8 @@ namespace BrokerLib.Brokers
 
                     if (candleList.Count > 0)
                     {
-                        if (candleList[0].Timestamp < fromDate || candleList[candleList.Count - 1].Timestamp > toDate)
+                        if (candleList[0].Timestamp < DateTimeExtensions.Normalize(fromDate, 1) ||
+                            candleList[candleList.Count - 1].Timestamp > DateTimeExtensions.Normalize(toDate, 1))
                         {
                             candleList.Clear();
                             return candleList;

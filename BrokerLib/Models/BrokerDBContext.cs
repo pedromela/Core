@@ -146,13 +146,13 @@ namespace BrokerLib.Models
             return null;
         }
 
-        public static T Execute<T>(Func<BrokerDBContext, T> func, bool executeAll = false)
+        public static T Execute<T>(Func<BrokerDBContext, T> func, bool insertOrUpdate = false)
         {
             foreach (var provider in providers)
             {
                 using (BrokerDBContext brokerContext = (BrokerDBContext)provider.GetDBContext())
                 {
-                    if (executeAll)
+                    if (insertOrUpdate)
                     {
                         func.Invoke(brokerContext);
                     }
@@ -160,7 +160,19 @@ namespace BrokerLib.Models
                     {
                         try
                         {
-                            return func.Invoke(brokerContext);
+                            var result = func.Invoke(brokerContext);
+                            if (typeof(T) == typeof(Array))
+                            {
+                                var resultCast = result as Array;
+                                if (resultCast.Length > 0)
+                                {
+                                    return result;
+                                }
+                            }
+                            else if(result != null)
+                            {
+                                return result;
+                            }
                         }
                         catch (Exception)
                         {
