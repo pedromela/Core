@@ -683,7 +683,7 @@ namespace SignalsEngine.Indicators
                 indicators.Add(sma.ShortName, sma);
 
                 Indicator smma = new SMMA(12, timeFrame, null);
-                indicators.Add(smma.ShortName, sma);
+                indicators.Add(smma.ShortName, smma);
 
                 Indicator ema = new EMA(12, timeFrame, null);
                 indicators.Add(ema.ShortName, ema);
@@ -718,12 +718,9 @@ namespace SignalsEngine.Indicators
                 Indicator changePoint200 = new ChangePoint(200, timeFrame, null);
                 indicators.Add(changePoint200.ShortName, changePoint200);
 
-                if (timeFrame == TimeFrames.D1)
-                {
-                    Indicator fearGreed = new FearGreed(200, timeFrame, null);
-                    fearGreed.Store = true;
-                    indicators.Add(fearGreed.ShortName, fearGreed);
-                }
+                Indicator fearGreed = new FearGreed(200, TimeFrames.D1, null);
+                fearGreed.Store = true;
+                indicators.Add(fearGreed.ShortName, fearGreed);
 
                 return indicators;
             }

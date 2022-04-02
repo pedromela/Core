@@ -36,7 +36,7 @@ namespace SignalsEngine.Indicators
     public class FearGreed : Indicator
     {
         public FearGreed(int Period, TimeFrames TimeFrame, MarketInfo marketInfo)
-        : base("FG:" + Period, Period, TimeFrame, marketInfo, "Fear and Greed Indicator")
+        : base("FG:" + Period, Period, TimeFrame, marketInfo, "Fear and Greed Indicator", false, false, true)
         {
             AddArgument("Period");
             this.ShorDescriptionName = GetShorDescriptionName();

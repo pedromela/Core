@@ -19,7 +19,7 @@ namespace SignalsEngine.Indicators
     public class ChangePoint : Indicator
     {
         public ChangePoint(int Period, TimeFrames TimeFrame, MarketInfo marketInfo)
-        : base("CP:" + Period, Period, TimeFrame, marketInfo, "Change Point Indicator")
+        : base("CP:" + Period, Period, TimeFrame, marketInfo, "Change Point Indicator", false, false, true)
         {
             AddArgument("Period");
             this.ShorDescriptionName = GetShorDescriptionName();
