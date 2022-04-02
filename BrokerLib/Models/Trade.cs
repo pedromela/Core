@@ -33,6 +33,7 @@ namespace BrokerLib.Models
         public TransactionType Type { get; set; }
         [Column(TypeName = "float")]
         public float Profit { get; set; }
+
         public Trade()
         : base(BrokerDBContext.providers)
         {
@@ -61,6 +62,17 @@ namespace BrokerLib.Models
         public override void Update()
         {
             base.Update();
+        }
+
+        public void Print() {
+            BrokerLib.DebugMessage("############################################################");
+            BrokerLib.DebugMessage("Trade");
+            BrokerLib.DebugMessage($"TransactionId {TransactionId} ");
+            BrokerLib.DebugMessage($"Amount {Amount} ");
+            BrokerLib.DebugMessage($"Price {Price} ");
+            BrokerLib.DebugMessage($"Market {Market} ");
+            BrokerLib.DebugMessage($"Type {Type.ToString()} ");
+            BrokerLib.DebugMessage("############################################################");
         }
     }
 }

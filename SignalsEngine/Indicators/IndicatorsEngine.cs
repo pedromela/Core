@@ -722,6 +722,9 @@ namespace SignalsEngine.Indicators
                 fearGreed.Store = true;
                 indicators.Add(fearGreed.ShortName, fearGreed);
 
+                Indicator dailyChange = new DailyChange(timeFrame, null);
+                indicators.Add(dailyChange.ShortName, dailyChange);
+
                 return indicators;
             }
             catch (Exception e)
@@ -852,6 +855,10 @@ namespace SignalsEngine.Indicators
                     fearGreed.Store = true;
                     indicators.Add(fearGreed.ShortName, fearGreed);
                 }
+
+                Indicator dailyChange = new DailyChange(timeFrame, marketInfo);
+                dailyChange.Store = true;
+                indicators.Add(dailyChange.ShortName, dailyChange);
 
                 //Indicator price = new Price("price", 200, timeFrame);
                 //indicators.Add(price.ShortName, price);

@@ -169,6 +169,8 @@ namespace BrokerLib.Brokers
                     tradeTansactionType,
                     trade.id);
 
+            closetrade.Print();
+
             return closetrade;
         }
 
@@ -235,6 +237,7 @@ namespace BrokerLib.Brokers
                                         transaction.Market,
                                         transaction.Type);
                 //trade.Store();
+                trade.Print();
                 return trade;
             }
             catch (Exception e)

@@ -12,30 +12,44 @@ using SignalsEngine.Indicators;
 using System;
 using static BrokerLib.BrokerLib;
 
-namespace SignalsEngine
+namespace SignalsEngine.Indicators
 {
-
     /// <summary>
     /// Momentum Indicator.
     /// </summary>
-    public class Momentum : Indicator
+    public class DailyChange : Indicator
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Momentum"/> class. 
         /// </summary>
         /// 
 
-        public Momentum(int Period, TimeFrames TimeFrame, MarketInfo marketInfo, string InputName)
-        : base("MOM:" + Period + ";" + InputName, Period, TimeFrame, marketInfo, "Momentum")
+        public DailyChange(TimeFrames TimeFrame, MarketInfo marketInfo)
+        : base("DC", 0, TimeFrame, marketInfo, "Daily Change", false, false, true)
         {
-            this.InputName = InputName;
-            AddArgument("Period");
-            ShorDescriptionName = GetShorDescriptionName();
-        }
-        public Momentum(int Period, TimeFrames TimeFrame, MarketInfo marketInfo)
-        : base("MOM:" + Period, Period, TimeFrame, marketInfo, "Momentum")
-        {
-            AddArgument("Period");
+            switch (TimeFrame)
+            {
+                case TimeFrames.M1:
+                    Period = 1440;
+                    break;
+                case TimeFrames.M5:
+                    Period = 1440/5;
+                    break;
+                case TimeFrames.M15:
+                    Period = 1440/15;
+                    break;
+                case TimeFrames.M30:
+                    Period = 1440 / 30;
+                    break;
+                case TimeFrames.H1:
+                    Period = 1440 / 60;
+                    break;
+                case TimeFrames.D1:
+                    Period = 1;
+                    break;
+                default:
+                    break;
+            }
             ShorDescriptionName = GetShorDescriptionName();
         }
 
@@ -50,8 +64,8 @@ namespace SignalsEngine
                 }
                 Candle candleLast = indicator.GetLastValue("middle");
                 Candle candlePedriod = indicator.ValueAt(idxPeriod, "middle");
-                float mom = candleLast.Close - candlePedriod.Close;
-                AddLastClose(mom, indicator.GetLastTimestamp());
+                float dailychange = (candleLast.Close - candlePedriod.Close) / candlePedriod.Close * 100;
+                AddLastClose(dailychange, indicator.GetLastTimestamp());
             }
             catch (Exception e)
             {
@@ -75,8 +89,8 @@ namespace SignalsEngine
                 }
                 Candle candleLast = indicator.GetLastValue("middle");
                 Candle candlePedriod = indicator.ValueAt(idxPeriod, "middle");
-                float mom = candleLast.Close - candlePedriod.Close;
-                AddLastClose(mom, indicator.GetLastTimestamp());
+                float dailychange = (candleLast.Close - candlePedriod.Close) / candlePedriod.Close * 100;
+                AddLastClose(dailychange, indicator.GetLastTimestamp());
                 return true;
             }
             catch (Exception e)
@@ -84,29 +98,6 @@ namespace SignalsEngine
                 SignalsEngine.DebugMessage(e);
             }
             return false;
-        }
-
-
-        /// <summary>
-        /// Calculates indicator.
-        /// </summary>
-        /// <param name="price">Price series.</param>
-        /// <param name="period">Indicator period.</param>
-        /// <returns>Calculated indicator series.</returns>
-        public static float[] Calculate(float[] price, int period)
-        {
-            var momentum = new float[price.Length];
-            for (int i = 0; i < period; i++)
-            {
-                momentum[i] = 0;
-            }
-
-            for (int i = period; i < price.Length; i++)
-            {
-                momentum[i] = price[i] * 100 / price[i - period];
-            }
-
-            return momentum;
         }
     }
 }

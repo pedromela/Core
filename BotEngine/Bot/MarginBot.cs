@@ -52,7 +52,7 @@ namespace BotEngine.Bot
                 {
                     ProcessErrors();
 
-                    Candle lastCandle = _signalsEngine.GetCurrentCandle(_botParameters.TimeFrame);
+                    Candle lastCandle = _signalsEngine.GetCurrentCandle(processBuyTypesTransactions ? _botParameters.TimeFrame : TimeFrames.M1);
 
                     IEnumerable<Transaction> sellTransactions = GetTransactionsByType(TransactionType.sell);
                     IEnumerable<Transaction> buyTransactions = GetTransactionsByType(TransactionType.buy);

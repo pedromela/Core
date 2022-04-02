@@ -34,6 +34,7 @@ namespace SignalsEngine
         {
             try
             {
+                base.Init(indicator);
                 float sum = 0;
                 var values = indicator.GetValues();
                 var lines = indicator.GetLines();
