@@ -388,7 +388,7 @@ namespace SignalsEngine.Indicators
 
         public virtual void Init(Indicator indicator, string inLine = "middle", string outLine = "middle")
         {
-
+            Clear();
         }
 
         public virtual bool CalculateNext(Indicator indicator)

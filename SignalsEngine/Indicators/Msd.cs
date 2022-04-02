@@ -28,6 +28,7 @@ namespace SignalsEngine.Indicators
         {
             try
             {
+                base.Init(indicator);
                 sma20.Init(indicator);
                 Calculate(indicator);
             }

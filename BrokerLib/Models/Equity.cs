@@ -47,7 +47,6 @@ namespace BrokerLib.Models
                 equity.RealAvailableAmountSymbol1 = broker.GetCurrencyBalance(ap, market, lastClose);
                 equity.RealAvailableAmountSymbol2 = broker.GetCurrencyBalance(ap, market, lastClose, true);
                 equity.Name = ap.Name;
-                equity.id = Guid.NewGuid().ToString();
                 equity.Store();
                 return equity;
             }
@@ -63,7 +62,7 @@ namespace BrokerLib.Models
             try
             {
                 id = Guid.NewGuid().ToString();
-                base.Update();
+                base.Store();
             }
             catch (Exception e)
             {

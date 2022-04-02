@@ -176,6 +176,8 @@ namespace BotEngine.Bot
             _botParameters.BotName = botParameters.BotName;
             _botParameters.StopLoss = botParameters.StopLoss;
             _botParameters.TakeProfit = botParameters.TakeProfit;
+            _botParameters.TrailingStop = botParameters.TrailingStop;
+            _botParameters.TrailingStopValue = botParameters.TrailingStopValue;
             _botParameters.LockProfits = botParameters.LockProfits;
             _botParameters.MutatedBotId = botParameters.MutatedBotId;
             _botParameters.InitLastProfitablePrice = botParameters.InitLastProfitablePrice;
@@ -207,6 +209,8 @@ namespace BotEngine.Bot
             _botParameters.BotName = botParameters.BotName;
             _botParameters.StopLoss = botParameters.StopLoss;
             _botParameters.TakeProfit = botParameters.TakeProfit;
+            _botParameters.TrailingStop = botParameters.TrailingStop;
+            _botParameters.TrailingStopValue = botParameters.TrailingStopValue;
             _botParameters.LockProfits = botParameters.LockProfits;
             _botParameters.MutatedBotId = botParameters.MutatedBotId;
             _botParameters.InitLastProfitablePrice = botParameters.InitLastProfitablePrice;
@@ -930,6 +934,7 @@ namespace BotEngine.Bot
                     if (lastCandle.Close > t.LastProfitablePrice || t.LastProfitablePrice <= 0)
                     {
                         t.LastProfitablePrice = lastCandle.Close;
+                        UpdateTransaction(t);
                     }
                     else if (lastCandle.Close <= t.LastProfitablePrice * (1.0f - _botParameters.TrailingStopValue))
                     {
@@ -942,6 +947,7 @@ namespace BotEngine.Bot
                     if (lastCandle.Close < t.LastProfitablePrice || t.LastProfitablePrice <= 0)
                     {
                         t.LastProfitablePrice = lastCandle.Close;
+                        UpdateTransaction(t);
                     }
                     else if (lastCandle.Close >= t.LastProfitablePrice * (1.0f + _botParameters.TrailingStopValue))
                     {
@@ -962,14 +968,6 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (_botParameters.StopLossMaxAtemptsBeforeStopBuying > 0)
-                {
-                    auxStopAfterStopLossMinutes++;
-                    if (auxStopAfterStopLossMinutes >= _botParameters.StopAfterStopLossMinutes)
-                    {
-                        StopBuying = true;
-                    }
-                }
                 CloseTrades(t, t.States + ";stoploss");
                 return true;
             }

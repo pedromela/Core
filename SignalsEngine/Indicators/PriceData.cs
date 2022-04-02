@@ -157,21 +157,28 @@ namespace SignalsEngine.Indicators
                 Dictionary<string, Candle> valueList = new Dictionary<string, Candle>();
                 Candle candle = new Candle();
                 candle.Close = lastCandle.Close;
+                candle.Open = lastCandle.Open;
+                candle.Min = lastCandle.Min;
+                candle.Max = lastCandle.Max;
+                candle.TimeFrame = lastCandle.TimeFrame;
+                candle.Volume = lastCandle.Volume;
+                candle.VolumeQuote = lastCandle.VolumeQuote;
+                candle.Symbol = lastCandle.Symbol;
                 candle.Timestamp = lastCandle.Timestamp;
                 valueList.Add("middle", candle);
 
                 candle = new Candle();
-                candle.Min = lastCandle.Min;
+                candle.Close = lastCandle.Min;
                 candle.Timestamp = lastCandle.Timestamp;
                 valueList.Add("min", candle);
 
                 candle = new Candle();
-                candle.Max = lastCandle.Max;
+                candle.Close = lastCandle.Max;
                 candle.Timestamp = lastCandle.Timestamp;
                 valueList.Add("max", candle);
 
                 candle = new Candle();
-                candle.Open = lastCandle.Open;
+                candle.Close = lastCandle.Open;
                 candle.Timestamp = lastCandle.Timestamp;
                 valueList.Add("open", candle);
 

@@ -2,7 +2,6 @@
 using BrokerLib.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using static BrokerLib.BrokerLib;
 
 namespace SignalsEngine.Indicators
@@ -46,6 +45,7 @@ namespace SignalsEngine.Indicators
 
         public override void Init(Indicator indicator)
         {
+            base.Init(indicator);
             var values = indicator.GetValues();
             var lines = indicator.GetLines();
             float VWAP = 0;

@@ -313,6 +313,7 @@ namespace BrokerLib.Brokers
                                         transaction.Market,
                                         transaction.Type);
                 //trade.Store();
+                trade.Print();
                 return trade;
             }
             catch (Exception e)
@@ -407,7 +408,7 @@ namespace BrokerLib.Brokers
             Transaction closetransaction = new Transaction(transaction);
             closetransaction.Type = tradeTansactionType;
 
-            Trade closetrade = Order(transaction, accessPoint, trade.Amount);
+            Trade closetrade = Order(closetransaction, accessPoint, trade.Amount);
             if (closetrade == null)
             {
                 int idebug = 0;
