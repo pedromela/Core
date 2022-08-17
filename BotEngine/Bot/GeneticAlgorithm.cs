@@ -17,12 +17,10 @@ namespace BotEngine.Bot
         int GenerationCounter = 0;
 
         private readonly int N;
-        private TradingEngine _botEngine;
 
         public GeneticAlgorithm(int NumberOfBots, TradingEngine botEngine)
         {
             N = NumberOfBots;
-            _botEngine = botEngine;
         }
 
         private void Evolution(/*ref Dictionary<int, Bot> botList*/) 
@@ -38,12 +36,9 @@ namespace BotEngine.Bot
                 //}
 
                 //_botEngine.Started = false;
-                List<Score> scoreList;
-
-                using (BotDBContext botContext = BotDBContext.newDBContext())
-                {
-                    scoreList = botContext.GetScoresFromDB();
-                }
+                List<Score> scoreList = BotDBContext.Execute(botContext => {
+                    return botContext.GetScoresFromDB();
+                });
 
                 List<BotParameters> toKillParameters = new List<BotParameters>();
                 List<Bot> toKill = new List<Bot>();
@@ -109,11 +104,11 @@ namespace BotEngine.Bot
                 {
                     score.AmountGainedDaily = 0.0F;
                 }
-                using (BotDBContext botContext = BotDBContext.newDBContext())
-                {
+                BotDBContext.Execute(botContext => {
                     botContext.Scores.UpdateRange(scoreList);
                     botContext.SaveChanges();
-                }
+                    return 0;
+                }, true);
                 GenerationCounter++;
                 Console.WriteLine("Evolution generation number : " + GenerationCounter);
 

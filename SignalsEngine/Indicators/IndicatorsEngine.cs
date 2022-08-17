@@ -725,6 +725,9 @@ namespace SignalsEngine.Indicators
                 Indicator dailyChange = new DailyChange(timeFrame, null);
                 indicators.Add(dailyChange.ShortName, dailyChange);
 
+                Indicator rsi = new RSI(14, timeFrame, null);
+                indicators.Add(rsi.ShortName, rsi);
+
                 return indicators;
             }
             catch (Exception e)
@@ -859,6 +862,10 @@ namespace SignalsEngine.Indicators
                 Indicator dailyChange = new DailyChange(timeFrame, marketInfo);
                 dailyChange.Store = true;
                 indicators.Add(dailyChange.ShortName, dailyChange);
+
+                Indicator rsi = new RSI(14, timeFrame, marketInfo);
+                rsi.Store = true;
+                indicators.Add(rsi.ShortName, rsi);
 
                 //Indicator price = new Price("price", 200, timeFrame);
                 //indicators.Add(price.ShortName, price);

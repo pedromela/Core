@@ -162,11 +162,10 @@ namespace TelegramEngine.Telegram
                         telegramContext.TelegramTransactions.Add(telegramTransaction);
                         telegramContext.SaveChanges();
                     }
-                    using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
-                    {
+                    BrokerDBContext.Execute(brokerContext => {
                         brokerContext.Transactions.AddRange(allBotTransactions);
-                        brokerContext.SaveChanges();
-                    }
+                        return brokerContext.SaveChanges();
+                    }, true);
                     
                     return telegramTransaction;
                 }
@@ -182,41 +181,40 @@ namespace TelegramEngine.Telegram
         {
             try
             {
-                using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
+                using (TelegramDBContext botContext = TelegramDBContext.newDBContext())
                 {
-                    using (TelegramDBContext botContext = TelegramDBContext.newDBContext())
+                    List<TelegramUserBotRelation> userBotRelations = botContext.TelegramUserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
+                    if (userBotRelations.Count == 0)
                     {
-                        List<TelegramUserBotRelation> userBotRelations = botContext.TelegramUserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
-                        if (userBotRelations.Count == 0)
-                        {
-                            return;
-                        }
-
-                        List<Trade> trades = new List<Trade>();
-
-                        bool save = false;
-
-                        foreach (TelegramUserBotRelation userBotRelation in userBotRelations)
-                        {
-                            save = true;
-                            TelegramEquity equity = botContext.TelegramEquities.Find(userBotRelation.EquityId);
-                            if (equity == null)
-                            {
-                                TelegramEngine.DebugMessage("SubscribedUsersOrder(): TelegramEquity" + userBotRelation.EquityId + " not found. userBotRelation botId/userId: " + userBotRelation.BotId + ":" + userBotRelation.UserId);
-                                continue;
-                            }
-
-                            trades.Add(_broker.Order(t, AccessPoint.Construct(userBotRelation.AccessPointId), userBotRelation.DefaultTransactionAmount));
-                        }
-
-                        if (!save)
-                        {
-                            return;
-                        }
-
-                        brokerContext.Trades.AddRange(trades);
-                        brokerContext.SaveChanges();
+                        return;
                     }
+
+                    List<Trade> trades = new List<Trade>();
+
+                    bool save = false;
+
+                    foreach (TelegramUserBotRelation userBotRelation in userBotRelations)
+                    {
+                        save = true;
+                        TelegramEquity equity = botContext.TelegramEquities.Find(userBotRelation.EquityId);
+                        if (equity == null)
+                        {
+                            TelegramEngine.DebugMessage("SubscribedUsersOrder(): TelegramEquity" + userBotRelation.EquityId + " not found. userBotRelation botId/userId: " + userBotRelation.BotId + ":" + userBotRelation.UserId);
+                            continue;
+                        }
+
+                        trades.Add(_broker.Order(t, AccessPoint.Construct(userBotRelation.AccessPointId), userBotRelation.DefaultTransactionAmount));
+                    }
+
+                    if (!save)
+                    {
+                        return;
+                    }
+
+                    BrokerDBContext.Execute(brokerContext => {
+                        brokerContext.Trades.AddRange(trades);
+                        return brokerContext.SaveChanges();
+                    }, true);
                 }
             }
             catch (Exception e)
@@ -363,16 +361,13 @@ namespace TelegramEngine.Telegram
             {
                 if (!_backtest)
                 {
-                    List<Trade> trades;
-                    using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
-                    {
-                        trades = brokerContext.Trades.Where(m => m.TransactionId == t.id).ToList();
-                    }
-                    List<UserBotRelation> userBotRelations;
-                    using (BotDBContext botContext = BotDBContext.newDBContext())
-                    {
-                        userBotRelations = botContext.UserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
-                    }
+                    List<Trade> trades = BrokerDBContext.Execute(brokerContext => {
+                        return brokerContext.Trades.Where(m => m.TransactionId == t.id).ToList();
+                    });
+
+                    List<UserBotRelation> userBotRelations = BotDBContext.Execute(botContext => {
+                        return botContext.UserBotRelations.Where(m => m.BotId == _botParameters.id).ToList();
+                    });
 
                     foreach (Trade trade in trades)
                     {
@@ -473,12 +468,9 @@ namespace TelegramEngine.Telegram
         {
             try
             {
-                using (BotDBContext context = BotDBContext.newDBContext())
-                {
-                    TelegramBot bot = new TelegramBot(telegramParameters, Channel.DecideChannel(telegramParameters.Channel));
-                    bot.RecreateSmartSellTransactions(telegramParameters.SmartSellTransactions);
-                    return bot;
-                }
+                TelegramBot bot = new TelegramBot(telegramParameters, Channel.DecideChannel(telegramParameters.Channel));
+                //bot.RecreateSmartSellTransactions(telegramParameters.SmartSellTransactions);
+                return bot;
             }
             catch (Exception e)
             {

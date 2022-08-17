@@ -187,8 +187,6 @@ namespace BrokerLib.Models
         //////////////////////// STATIC FUNCTIONS /////////////////////////
         ///////////////////////////////////////////////////////////////////
 
-        public static Dictionary<string, string> connectionStringMap = new Dictionary<string, string>();
-
         public static DbContextOptionsBuilder optionsBuilder = null;
 
         public static BrokerBDProvider[] providers;
@@ -196,17 +194,17 @@ namespace BrokerLib.Models
         public static void InitProviders() 
         {
             var provider1 = new BrokerBDProvider(new DBSettings("BrokerConnection"));
-            var provider2 = new BrokerBDProvider(new DBSettings("BrokerConnectionClient"));
+            //var provider2 = new BrokerBDProvider(new DBSettings("BrokerConnectionClient"));
             List<BrokerBDProvider> providersList = new List<BrokerBDProvider>();
 
             if (CanAddProvider(provider1))
             {
                 providersList.Add(provider1);
             }
-            if (CanAddProvider(provider2))
-            {
-                providersList.Add(provider2);
-            }
+            //if (CanAddProvider(provider2))
+            //{
+            //    providersList.Add(provider2);
+            //}
 
             providers = new BrokerBDProvider[providersList.Count];
             for (int i = 0; i < providersList.Count; i++)
@@ -236,17 +234,6 @@ namespace BrokerLib.Models
             return false;
         }
 
-        public static string GetConnectionString(string connectionName)
-        {
-            if (!connectionStringMap.ContainsKey(connectionName))
-            {
-                var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-                IConfigurationRoot Configuration = builder.Build();
-                connectionStringMap.Add(connectionName, Configuration.GetConnectionString(connectionName));
-            }
-            return connectionStringMap[connectionName];
-        }
-
         public static DbContextOptionsBuilder GetOptionsbuilder(string connectionName)
         {
             if (optionsBuilder == null)
@@ -262,9 +249,9 @@ namespace BrokerLib.Models
             return new BrokerDBContext(GetConnectionString("BrokerConnection"), (DbContextOptions<BrokerDBContext>)GetOptionsbuilder("BrokerConnection").Options);
         }
 
-        public static BrokerDBContext newDBContextClient()
-        {
-            return new BrokerDBContext(GetConnectionString("BrokerConnectionClient"), (DbContextOptions<BrokerDBContext>)GetOptionsbuilder("BrokerConnectionClient").Options);
-        }
+        //public static BrokerDBContext newDBContextClient()
+        //{
+        //    return new BrokerDBContext(GetConnectionString("BrokerConnectionClient"), (DbContextOptions<BrokerDBContext>)GetOptionsbuilder("BrokerConnectionClient").Options);
+        //}
     }
 }

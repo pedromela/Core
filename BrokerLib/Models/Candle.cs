@@ -154,8 +154,8 @@ namespace BrokerLib.Models
                 {
                     candles = Candles.FixConsistency(candles);
                 }
-                using (BrokerDBContext dataContext = BrokerDBContext.newDBContext())
-                {
+
+                return BrokerDBContext.Execute(dataContext => {
                     List<Candle> toRemove = new List<Candle>();
                     HashSet<Candle> candleSet = candles.ToHashSet();
                     foreach (Candle candle in candleSet)
@@ -171,7 +171,7 @@ namespace BrokerLib.Models
                             {
                                 continue;
                             }
-                            Candle findCandle =  dataContext.Candles.Find(candle.TimeFrame, candle.Symbol, candle.Timestamp);
+                            Candle findCandle = dataContext.Candles.Find(candle.TimeFrame, candle.Symbol, candle.Timestamp);
                             if (findCandle == null)
                             {
                                 dataContext.Candles.Add(candle);
@@ -194,7 +194,7 @@ namespace BrokerLib.Models
 
                     dataContext.SaveChanges();
                     return candles;
-                }
+                }, true);
             }
             catch (Exception e)
             {

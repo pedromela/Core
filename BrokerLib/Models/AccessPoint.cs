@@ -51,17 +51,17 @@ namespace BrokerLib.Models
         {
             try
             {
-                using (BrokerDBContext context = BrokerDBContext.newDBContextClient())
+                AccessPoint ap = BrokerDBContext.Execute(context => {
+                    return context.AccessPoints.Find(accessPointId);
+                });
+
+                if (ap == null)
                 {
-                    AccessPoint ap = context.AccessPoints.Find(accessPointId);
-                    if (ap == null)
-                    {
-                        BrokerLib.DebugMessage(String.Format("AccessPoint::Constructor() : accessPointId {0} is not valid", accessPointId));
-                        return null;
-                    }
-                    return ap;
+                    BrokerLib.DebugMessage(String.Format("AccessPoint::Constructor() : accessPointId {0} is not valid", accessPointId));
+                    return null;
                 }
 
+                return ap;
             }
             catch (Exception e)
             {

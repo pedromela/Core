@@ -66,43 +66,45 @@ namespace BotEngine
 
                     List<BotParameters> botsParametersList;
                     List<BotParameters> botsParametersListNotValid;
-                    using (BotDBContext botContext = BotDBContext.newDBContext())
+
+                    botsParametersList = BotDBContext.Execute(botContext => {
+                        return botContext.GetBotsFromDB();
+                    });
+                    botsParametersListNotValid = new List<BotParameters>();
+
+                    foreach (var botParameters1 in botsParametersList)
                     {
-                        botsParametersList = botContext.GetBotsFromDB();
-                        botsParametersListNotValid = new List<BotParameters>();
-
-
-                        foreach (var botParameters1 in botsParametersList)
+                        if (!botParameters1.ValidStart2())
                         {
-                            if (!botParameters1.ValidStart2())
-                            {
-                                DebugMessage(String.Format("TradingEngine::Init() : Bot {1}/{0} is not valid!", botParameters1.id, botParameters1.BotName));
+                            DebugMessage(String.Format("TradingEngine::Init() : Bot {1}/{0} is not valid!", botParameters1.id, botParameters1.BotName));
 
-                                botsParametersListNotValid.Add(botParameters1);
-                            }
+                            botsParametersListNotValid.Add(botParameters1);
                         }
-                        foreach (var botParameters2 in botsParametersListNotValid)
-                        {
-                            botsParametersList.Remove(botParameters2);
-                            botParameters2.Delete();
-                        }
+                    }
+                    foreach (var botParameters2 in botsParametersListNotValid)
+                    {
+                        botsParametersList.Remove(botParameters2);
+                        botParameters2.Delete();
+                    }
 
-                        if (botsParametersList.Count == 0)
-                        {
-                            ClearDatabase();
-                            InitExempleStrategies();
-                            GenerateBotsForeachMarketTimeFrame();
-                            botsParametersList = botContext.GetBotsFromDB();
-                        }
-                        else
-                        {
-                            //BotParameters botParameters = _botRanking.KillWorstBot();
-                            //if (botParameters != null)
-                            //{
-                            //    botsParametersList.Remove(botsParametersList.Find(bot => bot.id == botParameters.id));
-                            //}
-                            _botRanking.CalculateBestRankings();
-                        }
+                    if (botsParametersList.Count == 0)
+                    {
+                        ClearDatabase();
+                        InitExempleStrategies();
+                        GenerateBotsForeachMarketTimeFrame();
+
+                        botsParametersList = BotDBContext.Execute(botContext => {
+                            return botContext.GetBotsFromDB();
+                        });
+                    }
+                    else
+                    {
+                        //BotParameters botParameters = _botRanking.KillWorstBot();
+                        //if (botParameters != null)
+                        //{
+                        //    botsParametersList.Remove(botsParametersList.Find(bot => bot.id == botParameters.id));
+                        //}
+                        _botRanking.CalculateBestRankings();
                     }
 
                     o.OnNext(20);
@@ -149,6 +151,7 @@ namespace BotEngine
 
                     Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = GetActiveBrokerMarketsDict(botsParametersList);
                     IndicatorsSharedData.InitInstance(activeBrokerMarketsDict);
+                    //MarketDataClient client
 
                     o.OnNext(60);
 
@@ -179,11 +182,12 @@ namespace BotEngine
                         List<Transaction> activeTransactions = null;
                         List<Trade> activeTrades = null;
 
-                        using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
+                        (activeTransactions, activeTrades) = BrokerDBContext.Execute(brokerContext =>
                         {
-                            activeTransactions = brokerContext.Transactions.AsNoTracking().Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
-                            activeTrades = brokerContext.Trades.AsNoTracking().Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
-                        }
+                            var activeTransactions = brokerContext.Transactions.AsNoTracking().Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
+                            var activeTrades = brokerContext.Trades.AsNoTracking().Where(m => m.Type == TransactionType.buy || m.Type == TransactionType.sell).ToList();
+                            return (activeTransactions, activeTrades);
+                        });
 
                         Task[] loadingTaks = new Task[botsParametersList.Count()];
                         int i = 0;
@@ -237,10 +241,11 @@ namespace BotEngine
 
                     o.OnNext(90);
 
-                    using (BotDBContext botContext = BotDBContext.newDBContext())
-                    {
-                        _geneticAlgorithm = new GeneticAlgorithm(botContext.BotsParameters.ToList().Count, this);
-                    }
+
+                    _geneticAlgorithm = BotDBContext.Execute(botContext => {
+                        return new GeneticAlgorithm(botContext.BotsParameters.ToList().Count, this);
+                    });
+
                     var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
                     Configuration = builder.Build();
 

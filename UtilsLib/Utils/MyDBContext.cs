@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ namespace UtilsLib.Utils
         private static Dictionary<string, int> myStaticFieldDict = new Dictionary<string, int>();
         private static Dictionary<string, ConcurrentHashSet<MyDbContext>> StaticCurrentContexts = new Dictionary<string, ConcurrentHashSet<MyDbContext>>();
         private static Dictionary<string, Dictionary<string, ConcurrentHashSet<DBModelBase>>> StaticRetryDict = new Dictionary<string, Dictionary<string, ConcurrentHashSet<DBModelBase>>>();
+        private static Dictionary<string, string> connectionStringMap = new Dictionary<string, string>();
 
         public int ContextCount
         {
@@ -84,8 +86,8 @@ namespace UtilsLib.Utils
 
         public override void Dispose() 
         {
-            base.Dispose();
             DecrementCountContext();
+            base.Dispose();
         }
 
         public override ValueTask DisposeAsync()
@@ -118,6 +120,17 @@ namespace UtilsLib.Utils
             {
                 UtilsLib.DebugMessage(e);
             }
+        }
+
+        public static string GetConnectionString(string connectionName)
+        {
+            if (!connectionStringMap.ContainsKey(connectionName))
+            {
+                var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                IConfigurationRoot Configuration = builder.Build();
+                connectionStringMap.Add(connectionName, Configuration.GetConnectionString(connectionName));
+            }
+            return connectionStringMap[connectionName];
         }
     }
 }

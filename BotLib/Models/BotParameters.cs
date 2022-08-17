@@ -154,11 +154,13 @@ namespace BotLib.Models
                     return false;
                 }
                 bool scoreExists = false;
-                using (BotDBContext context = BotDBContext.newDBContext())
-                {
-                    strategyExists = context.ConditionStrategiesData.AsNoTracking().Any(m => m.id == StrategyId);
-                    scoreExists = context.Scores.AsNoTracking().Any(m => m.BotParametersId == id);
-                }
+
+                (strategyExists, scoreExists) = BotDBContext.Execute(context => {
+                    var strategyExists = context.ConditionStrategiesData.AsNoTracking().Any(m => m.id == StrategyId);
+                    var scoreExists = context.Scores.AsNoTracking().Any(m => m.BotParametersId == id);
+                    return (strategyExists, scoreExists);
+                });
+
                 return Valid() &&
                     strategyExists &&
                     scoreExists &&
@@ -277,8 +279,8 @@ namespace BotLib.Models
                 BotParameters botParameters = GetRandomBotParameters(count, strategyId);
                 botParameters.TimeFrame = timeFrame;
                 botParameters.Market = market;
-                botParameters.BrokerId = brokerDescription.BrokerId;
-                botParameters.BrokerType = brokerDescription.BrokerType;
+                botParameters.BrokerId = brokerDescription == null ? Brokers.None : brokerDescription.BrokerId;
+                botParameters.BrokerType = brokerDescription == null ? BrokerType.exchange : brokerDescription.BrokerType;
                 return botParameters;
             }
             catch (Exception e)

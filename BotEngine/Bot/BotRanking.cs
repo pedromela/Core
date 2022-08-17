@@ -23,7 +23,7 @@ namespace BotEngine.Bot
                 {
                     _rankingBots.Clear();
                 }
-                using (BotDBContext botContext = BotDBContext.newDBContext())
+                BotDBContext.Execute((botContext) =>
                 {
                     List<BotParameters> botParametersList = botContext.GetBotsFromDB();
                     List<BotParametersRanking> botRankingsList = botContext.GetBotRankingsFromDB();
@@ -54,11 +54,9 @@ namespace BotEngine.Bot
                         _rankingBots.Add(new BotParametersRanking(i + 1, auxbotParametersList[i].id));
                     }
                     botContext.SaveBotRankings(_rankingBots);
-                    using (BotDBContext botContextClient = BotDBContext.newDBContextClient())
-                    {
-                        botContextClient.SaveBotRankings(_rankingBots);
-                    }
-                }
+                    return 0;
+                }, true);
+                
             }
             catch (Exception e)
             {
@@ -70,14 +68,13 @@ namespace BotEngine.Bot
         {
             try
             {
-                using (BotDBContext botContext = BotDBContext.newDBContext())
-                {
+                return BotDBContext.Execute(botContext => {
                     List<BotParametersRanking> botRankingsList = botContext.GetBotRankingsFromDB();
                     BotParametersRanking botParametersRanking = botRankingsList.Last();
                     BotParameters botParameters = botContext.BotsParameters.Find(botParametersRanking.BotId);
                     botParameters.Delete();
                     return botParameters;
-                }
+                }, true);
             }
             catch (Exception e)
             {

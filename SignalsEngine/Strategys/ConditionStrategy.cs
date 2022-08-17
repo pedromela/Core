@@ -193,11 +193,9 @@ namespace SignalsEngine.Strategys
         {
             try
             {
-                ConditionStrategyData conditionStrategyData = null;
-                using (BotDBContext botContext = BotDBContext.newDBContext())
-                {
-                    conditionStrategyData = botContext.ConditionStrategiesData.Find(strategyId);
-                }
+                ConditionStrategyData conditionStrategyData = BotDBContext.Execute(botContext => {
+                    return botContext.ConditionStrategiesData.Find(strategyId);
+                });
                 ConditionStrategy conditionStrategy = new ConditionStrategy(conditionStrategyData, marketInfo, timeFrame, botId);
                 return conditionStrategy;
             }

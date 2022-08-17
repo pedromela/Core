@@ -16,6 +16,7 @@ namespace BrokerLib
             //Bitstamp,
             //Poloniex,
             //Kraken,
+            None
         }
         public enum TimeFrames
         {

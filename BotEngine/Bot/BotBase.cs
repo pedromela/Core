@@ -424,10 +424,9 @@ namespace BotEngine.Bot
                         {
                             try
                             {
-                                using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
-                                {
-                                    transactions = brokerContext.Transactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
-                                }
+                                transactions = BrokerDBContext.Execute(brokerContext => {
+                                    return brokerContext.Transactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
+                                });
                             }
                             catch (Exception)
                             {
@@ -490,8 +489,8 @@ namespace BotEngine.Bot
                     if (result)
                     {
                         countSells++;
+                        sellTransactionsByFrame++;
                     }
-                    sellTransactionsByFrame++;
                 }
                 float CurrentProfit = currentProfit;
 
@@ -815,12 +814,10 @@ namespace BotEngine.Bot
                     return;
                 }
 
-                Equity equity = null;
+                Equity equity = BrokerDBContext.Execute(context => {
+                    return context.Equitys.Find(userBotRelation.EquityId);
+                });
 
-                using (var context = BrokerDBContext.newDBContext())
-                {
-                    equity = context.Equitys.Find(userBotRelation.EquityId);
-                }
                 if (equity == null)
                 {
                     BotEngine.DebugMessage("BotBase::UserOrder(): EquityId " + userBotRelation.EquityId + " not found. userBotRelation botId/userId: " + userBotRelation.BotId + "/" + userBotRelation.UserId);
@@ -1055,10 +1052,12 @@ namespace BotEngine.Bot
                 if (!_backtest)
                 {
                     List<UserBotRelation> userBotRelations = null;
-                    using (BotDBContext botContext = BotDBContext.newDBContextClient())
+
+                    userBotRelations = BotDBContext.Execute(botContext =>
                     {
-                        userBotRelations = botContext.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
-                    }
+                        return botContext.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
+                    });
+
                     Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
 
                     foreach (UserBotRelation userBotRelation in userBotRelations)
@@ -1258,11 +1257,10 @@ namespace BotEngine.Bot
             {
                 if (_SellTransactions)
                 {
-                    List<Transaction> transactions;
-                    using (BrokerDBContext brokerContext = BrokerDBContext.newDBContext())
-                    {
-                        transactions = brokerContext.Transactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals("smartsell")).ToList();
-                    }
+                    List<Transaction> transactions = BrokerDBContext.Execute(brokerContext => {
+                        return brokerContext.Transactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals("smartsell")).ToList();
+                    });
+
                     foreach (var t in transactions)
                     {
                         //SmartSell(t, GetCandleById(t.BuyPriceId));
@@ -1303,11 +1301,9 @@ namespace BotEngine.Bot
 
                 try
                 {
-                    Score score;
-                    using (BotDBContext botContext = BotDBContext.newDBContext())
-                    {
-                        score = botContext.Scores.AsNoTracking().Single(m => m.BotParametersId == _botParameters.id);
-                    }
+                    Score score = BotDBContext.Execute(botContext => {
+                        return botContext.Scores.AsNoTracking().Single(m => m.BotParametersId == _botParameters.id);
+                    });
 
                     BotEngine.DebugMessage("Win rate:" + (score.Positions > 0 ? score.Successes / score.Positions : 0));
                     BotEngine.DebugMessage("Current profit:" + score.CurrentProfit);
@@ -1379,25 +1375,26 @@ namespace BotEngine.Bot
             {
                 if (!_backtest)
                 {
-                    Transaction transaction = null;
-                    Trade trade = null;
-                    using (BrokerDBContext brokerContext = BrokerDBContext.newDBContextClient())
+                    Trade trade = BrokerDBContext.Execute(brokerContext => {
+                        return brokerContext.Trades.Find(t.id);
+                    });
+
+                    if (trade != null)
                     {
-                        trade = brokerContext.Trades.Find(t.id);
-                        if (trade != null)
-                        {
-                            tradeErrors.Remove(t);
-                            return;
-                        }
-                        transaction = _transactionsDict[t.Type].Values.SingleOrDefault(m => m.id == t.TransactionId);
+                        tradeErrors.Remove(t);
+                        return;
                     }
+
+                    Transaction transaction = _transactionsDict[t.Type].Values.SingleOrDefault(m => m.id == t.TransactionId);
+                    
                     if (IsTransactionBuyTypes(t.Type))
                     {
                         UserBotRelation userBotRelation = null;
-                        using (BotDBContext botContext = BotDBContext.newDBContextClient())
-                        {
-                            userBotRelation = botContext.UserBotRelations.AsNoTracking().SingleOrDefault(m => m.BotId == _botParameters.id);
-                        }
+
+                        userBotRelation = BotDBContext.Execute(botContext => {
+                            return botContext.UserBotRelations.AsNoTracking().SingleOrDefault(m => m.BotId == _botParameters.id);
+                        });
+                        
                         Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
                         try
                         {
@@ -1429,16 +1426,16 @@ namespace BotEngine.Bot
             {
                 if (!_backtest)
                 {
-                    Transaction transaction = null;
-                    using (BrokerDBContext brokerContext = BrokerDBContext.newDBContextClient())
+                    Transaction transaction = BrokerDBContext.Execute(brokerContext => {
+                        return brokerContext.Transactions.Find(t.id);
+                    });
+
+                    if (transaction != null)
                     {
-                        transaction = brokerContext.Transactions.Find(t.id);
-                        if (transaction != null)
-                        {
-                            transactionErrors.Remove(t);
-                            return;
-                        }
+                        transactionErrors.Remove(t);
+                        return;
                     }
+
                     if (IsTransactionBuyTypes(t.Type))
                     {
                         SubscribedUsersOrder(t);
@@ -1634,20 +1631,19 @@ namespace BotEngine.Bot
                 }
                 else
                 {
-                    using (var context = BotDBContext.newDBContext())
+                    _score = BotDBContext.Execute(context => {
+                        return context.Scores.AsNoTracking().SingleOrDefault(s => s.BotParametersId == _botParameters.id);
+                    });
+                    if (_score == null)
                     {
-                        _score = context.Scores.AsNoTracking().SingleOrDefault(s => s.BotParametersId == _botParameters.id);
-                        if (_score == null)
-                        {
-                            _score = new Score();
-                            _score.Positions = 0;
-                            _score.BotParametersId = _botParameters.id;
-                            _score.Successes = 0;
-                            _score.ActiveTransactions = 0;
-                            _score.CurrentProfit = 0.0f;
-                            _score.MaxDrawBack = 0.0f;
-                            _score.Store();
-                        }
+                        _score = new Score();
+                        _score.Positions = 0;
+                        _score.BotParametersId = _botParameters.id;
+                        _score.Successes = 0;
+                        _score.ActiveTransactions = 0;
+                        _score.CurrentProfit = 0.0f;
+                        _score.MaxDrawBack = 0.0f;
+                        _score.Store();
                     }
                 }
             }
@@ -1788,12 +1784,10 @@ namespace BotEngine.Bot
         {
             try
             {
-                BotParameters botParameters = null;
-
-                using (BotDBContext context = BotDBContext.newDBContext())
-                {
-                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), strategyId);
-                }
+                BotParameters botParameters = botParameters = BotDBContext.Execute(context => {
+                    return BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), strategyId);
+                });
+                
                 if (save)
                 {
                     botParameters.Store();
@@ -1825,12 +1819,10 @@ namespace BotEngine.Bot
         {
             try
             {
-                BotParameters botParameters = null;
+                BotParameters botParameters = BotDBContext.Execute(context => {
+                    return BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), timeFrame, market, brokerDescription, strategyId);
+                });
 
-                using (BotDBContext context = BotDBContext.newDBContext())
-                {
-                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), timeFrame, market, brokerDescription, strategyId);
-                }
                 if (save)
                 {
                     botParameters.Store();
@@ -1860,12 +1852,10 @@ namespace BotEngine.Bot
         {
             try
             {
-                BotParameters botParameters = null;
+                BotParameters botParameters = BotDBContext.Execute(context => {
+                    return BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), timeFrame, market, brokerDescription, strategyId);
+                });
 
-                using (BotDBContext context = BotDBContext.newDBContext())
-                {
-                    botParameters = BotParameters.GetRandomBotParameters(context.BotsParameters.AsNoTracking().Count(), timeFrame, market, brokerDescription, strategyId);
-                }
                 if (save)
                 {
                     botParameters.Store();

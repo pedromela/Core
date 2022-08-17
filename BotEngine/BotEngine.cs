@@ -327,53 +327,7 @@ namespace BotEngine
 
                 if (timeFrame == TimeFrames.M1)
                 {
-                    BotDBContext.Execute((botContext) =>
-                    {
-                        try
-                        {
-                            var botList = GetBots();
-                            botContext.Scores.UpdateRange(botList.Select(bot => bot._score));
-                            var name = nameof(Profit);
-                            if (botContext.RetryDict.ContainsKey(name))
-                            {
-                                var profits = (Profit[])botContext.RetryDict[name].ToArray();
-                                botContext.Profits.AddRange(profits);
-                                botContext.RetryDict[name].Clear();
-                            }
-                            botContext.SaveChanges();
-                        }
-                        catch (Exception)
-                        {
-                            int idebug = 0;
-                        }
-                        return 0;
-                    }, true);
-                    BrokerDBContext.Execute((brokerContext) =>
-                    {
-                        try
-                        {
-                            var name = nameof(Transaction);
-                            if (brokerContext.RetryDict.ContainsKey(name))
-                            {
-                                var transactions = (Transaction[])brokerContext.RetryDict[name].ToArray();
-                                brokerContext.Transactions.AddRange(transactions);
-                                brokerContext.RetryDict[name].Clear();
-                            }
-                            name = nameof(Trade);
-                            if (brokerContext.RetryDict.ContainsKey(name))
-                            {
-                                var trades = (Trade[])brokerContext.RetryDict[name].ToArray();
-                                brokerContext.Trades.AddRange(trades);
-                                brokerContext.RetryDict[name].Clear();
-                            }
-                            brokerContext.SaveChanges();
-                        }
-                        catch (Exception)
-                        {
-                            int idebug = 0;
-                        }
-                        return 0;
-                    }, true);
+                    SaveFailedChanges();
                 }
 
                 lock (ready[timeFrame].Lock)
@@ -387,6 +341,57 @@ namespace BotEngine
             {
                 DebugMessage(e);
             }
+        }
+
+        private void SaveFailedChanges() 
+        {
+            BotDBContext.Execute((botContext) =>
+            {
+                try
+                {
+                    var botList = GetBots();
+                    botContext.Scores.UpdateRange(botList.Select(bot => bot._score));
+                    var name = nameof(Profit);
+                    if (botContext.RetryDict.ContainsKey(name))
+                    {
+                        var profits = (Profit[])botContext.RetryDict[name].ToArray();
+                        botContext.Profits.AddRange(profits);
+                        botContext.RetryDict[name].Clear();
+                    }
+                    botContext.SaveChanges();
+                }
+                catch (Exception)
+                {
+                    int idebug = 0;
+                }
+                return 0;
+            }, true);
+            BrokerDBContext.Execute((brokerContext) =>
+            {
+                try
+                {
+                    var name = nameof(Transaction);
+                    if (brokerContext.RetryDict.ContainsKey(name))
+                    {
+                        var transactions = (Transaction[])brokerContext.RetryDict[name].ToArray();
+                        brokerContext.Transactions.AddRange(transactions);
+                        brokerContext.RetryDict[name].Clear();
+                    }
+                    name = nameof(Trade);
+                    if (brokerContext.RetryDict.ContainsKey(name))
+                    {
+                        var trades = (Trade[])brokerContext.RetryDict[name].ToArray();
+                        brokerContext.Trades.AddRange(trades);
+                        brokerContext.RetryDict[name].Clear();
+                    }
+                    brokerContext.SaveChanges();
+                }
+                catch (Exception)
+                {
+                    int idebug = 0;
+                }
+                return 0;
+            }, true);
         }
 
         public Dictionary<string, List<Candle>> GetAllDataToInitVWAP()
@@ -479,11 +484,10 @@ namespace BotEngine
         {
             try
             {
-                List<BotParametersChanges> botParametersChanges;
-                using (var contextClient = BotDBContext.newDBContext())
-                {
-                    botParametersChanges = contextClient.BotParametersChanges.ToList(); ;
-                }
+                List<BotParametersChanges> botParametersChanges = BotDBContext.Execute(contextClient => {
+                    return contextClient.BotParametersChanges.ToList();
+                });
+
                 foreach (BotParametersChanges botParameters in botParametersChanges)
                 {
                     if (botParameters.RecentlyCreated)
@@ -515,11 +519,10 @@ namespace BotEngine
                     }
                     else if (botParameters.RecentlyModified)
                     {
-                        BotParameters botparameters;
-                        using (var context = BotDBContext.newDBContext())
-                        {
-                            botparameters = context.BotsParameters.Find(botParameters.BotId);
-                        }
+                        BotParameters botparameters = BotDBContext.Execute(context => {
+                            return context.BotsParameters.Find(botParameters.BotId);
+                        });
+
                         if (botparameters == null)
                         {
                             botparameters = new BotParameters(botParameters);
@@ -528,6 +531,7 @@ namespace BotEngine
                         {
                             botparameters.ChangeParameters(botParameters);
                         }
+
                         botparameters.Update();
                         botParameters.RecentlyModified = false;
                         botParameters.Update();
@@ -556,16 +560,16 @@ namespace BotEngine
                     }
                     else if (botParameters.RecentlyDeleted)
                     {
-                        BotParameters botparameters;
-                        using (var context = BotDBContext.newDBContext())
-                        {
-                            botparameters = context.BotsParameters.Find(botParameters.id);
-                        }
+                        BotParameters botparameters = BotDBContext.Execute(context => {
+                            return context.BotsParameters.Find(botParameters.id);
+                        });
+
                         if (botparameters == null)
                         {
                             DebugMessage("UpdateBots() : BotId " + botParameters.BotId + " delete error. The bot does not exist in the Database.");
                             return;
                         }
+
                         botEngine._botDict[botParameters.TimeFrame].Remove(botParameters.BotId);
                         botparameters.Delete();
                         botParameters.RecentlyDeleted = false;

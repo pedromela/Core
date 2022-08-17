@@ -66,6 +66,9 @@ namespace TelegramEngine
         {
             try
             {
+                BotDBContext.InitProviders();
+                BrokerDBContext.InitProviders();
+
                 List<TelegramParameters> botsParametersList = _telegramContext.GetBotsFromDB();
 
                 if (botsParametersList.Count == Channel.MAX)

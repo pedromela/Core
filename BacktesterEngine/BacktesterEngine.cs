@@ -215,10 +215,10 @@ namespace BacktesterEngine
             try
             {
                 BotParameters botParameters;
-                using (BotDBContext botContext = BotDBContext.newDBContext())
+                botParameters = BotDBContext.Execute(botContext =>
                 {
-                    botParameters = botContext.BotsParameters.Find(BotId);
-                }
+                    return botContext.BotsParameters.Find(BotId);
+                });
                 CleanBotBacktestingData(BotId);
                 InitBot(botParameters, fromDate, toDate);
                 BotBase bot = _botDict[botParameters.TimeFrame][botParameters.id];
@@ -506,7 +506,7 @@ namespace BacktesterEngine
                 List<BacktesterScore> scoresToRemove = new List<BacktesterScore>();
                 List<BacktesterTransaction> transactionsToRemove = new List<BacktesterTransaction>();
 
-                using (BotDBContext botContext = BotDBContext.newDBContext())
+                BotDBContext.Execute(botContext =>
                 {
                     foreach (BacktesterScore score in scores)
                     {
@@ -515,10 +515,12 @@ namespace BacktesterEngine
                             scoresToRemove.Add(score);
                         }
                     }
-                }
+                    return 0;
+                });
+
                 _backtesterContext.BacktesterScores.RemoveRange(scoresToRemove);
 
-                using (BotDBContext botContext = BotDBContext.newDBContext())
+                BotDBContext.Execute(botContext =>
                 {
                     foreach (BacktesterTransaction transaction in transactions)
                     {
@@ -527,7 +529,9 @@ namespace BacktesterEngine
                             transactionsToRemove.Add(transaction);
                         }
                     }
-                }
+                    return 0;
+                });
+
                 _backtesterContext.BacktesterTransactions.RemoveRange(transactionsToRemove);
                 DebugMessage("Clean done.");
                 DebugMessage("############################################################");

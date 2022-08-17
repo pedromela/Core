@@ -330,10 +330,10 @@ namespace BotEngine.Bot
                 if (!_backtest)
                 {
                     List<UserBotRelation> userBotRelations = null;
-                    using (var context = BotDBContext.newDBContextClient())
-                    {
-                        userBotRelations = context.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
-                    }
+                    
+                    userBotRelations = BotDBContext.Execute(context => {
+                        return context.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList(); ;
+                    });
 
                     Candle lastCandle = _signalsEngine.GetCurrentCandle(TimeFrames.M1);
 
@@ -356,10 +356,11 @@ namespace BotEngine.Bot
                 if (!_backtest)
                 {
                     List<UserBotRelation> userBotRelations = null;
-                    using (var context = BotDBContext.newDBContextClient())
+
+                    userBotRelations = BotDBContext.Execute(context =>
                     {
-                        userBotRelations = context.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
-                    }
+                        return context.UserBotRelations.AsNoTracking().Where(m => m.BotId == _botParameters.id).ToList();
+                    });
 
                     transaction.Type = BrokerLib.BrokerLib.CloseTransactionType(transaction.Type);
 
@@ -384,22 +385,21 @@ namespace BotEngine.Bot
                 {
                     return;
                 }
-                AccessPoint ap = null;
 
-                using (BrokerDBContext brokerContext = BrokerDBContext.newDBContextClient())
-                {
-                    ap = brokerContext.AccessPoints.Find(userBotRelation.AccessPointId);
-                }
+                AccessPoint ap = BrokerDBContext.Execute(brokerContext => {
+                    return brokerContext.AccessPoints.Find(userBotRelation.AccessPointId);
+                });
+
                 if (ap == null)
                 {
                     BotEngine.DebugMessage("Bot::UserOrder(): " + userBotRelation.UserId + " / " + userBotRelation.BotId + " acess point not found.");
                     return;
                 }
-                Equity equity = null;
-                using (var context = BrokerDBContext.newDBContext())
-                {
-                    equity = context.Equitys.Find(userBotRelation.EquityId);
-                }
+
+                Equity equity = BrokerDBContext.Execute(context => {
+                    return context.Equitys.Find(userBotRelation.EquityId);
+                });
+
                 if (equity == null)
                 {
                     BotEngine.DebugMessage("Bot::UserOrder(): Equity " + userBotRelation.EquityId + " not found. userBotRelation botId/userId: " + userBotRelation.BotId + ":" + userBotRelation.UserId);

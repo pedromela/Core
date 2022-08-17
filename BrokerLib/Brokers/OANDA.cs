@@ -117,6 +117,7 @@ namespace BrokerLib.Brokers
         public List<OANDACandleModel> candles { get; set; }
         public string granularity { get; set; }
         public string instrument { get; set; }
+        public string errorMessage { get; set; }
 
         public List<Candle> ConvertToCandleList() 
         {

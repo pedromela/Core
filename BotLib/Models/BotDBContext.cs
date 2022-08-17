@@ -136,8 +136,6 @@ namespace BotLib.Models
         //////////////////////// STATIC FUNCTIONS /////////////////////////
         ///////////////////////////////////////////////////////////////////
 
-        public static Dictionary<string, string> connectionStringMap = new Dictionary<string, string>();
-
         public static DbContextOptionsBuilder optionsBuilder = null;
 
         public static BotBDProvider[] providers = null;
@@ -146,17 +144,17 @@ namespace BotLib.Models
         {
             providers = new BotBDProvider[2];
             var provider1 = new BotBDProvider(new DBSettings("BotConnection"));
-            var provider2 = new BotBDProvider(new DBSettings("BotConnectionClient"));
+            //var provider2 = new BotBDProvider(new DBSettings("BotConnectionClient"));
             List<BotBDProvider> providersList = new List<BotBDProvider>();
 
             if (CanAddProvider(provider1))
             {
                 providersList.Add(provider1);
             }
-            if (CanAddProvider(provider2))
-            {
-                providersList.Add(provider2);
-            }
+            //if (CanAddProvider(provider2))
+            //{
+            //    providersList.Add(provider2);
+            //}
 
             providers = new BotBDProvider[providersList.Count];
             for (int i = 0; i < providersList.Count; i++)
@@ -185,17 +183,6 @@ namespace BotLib.Models
             return false;
         }
 
-        public static string GetConnectionString(string connectionName)
-        {
-            if (!connectionStringMap.ContainsKey(connectionName))
-            {
-                var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-                IConfigurationRoot Configuration = builder.Build();
-                connectionStringMap.Add(connectionName, Configuration.GetConnectionString(connectionName));
-            }
-            return connectionStringMap[connectionName];
-        }
-
         public static DbContextOptionsBuilder GetOptionsbuilder(string connectionName) 
         {
             if (optionsBuilder == null)
@@ -206,15 +193,15 @@ namespace BotLib.Models
             return optionsBuilder;
         }
 
-        public static BotDBContext newDBContext() 
-        {
-            return new BotDBContext(GetConnectionString("BotConnection"), (DbContextOptions<BotDBContext>)GetOptionsbuilder("BotConnection").Options);
-        }
+        //public static BotDBContext newDBContext() 
+        //{
+        //    return new BotDBContext(GetConnectionString("BotConnection"), (DbContextOptions<BotDBContext>)GetOptionsbuilder("BotConnection").Options);
+        //}
 
-        public static BotDBContext newDBContextClient()
-        {
-            return new BotDBContext(GetConnectionString("BotConnectionClient"), (DbContextOptions<BotDBContext>)GetOptionsbuilder("BotConnectionClient").Options);
-        }
+        //public static BotDBContext newDBContextClient()
+        //{
+        //    return new BotDBContext(GetConnectionString("BotConnectionClient"), (DbContextOptions<BotDBContext>)GetOptionsbuilder("BotConnectionClient").Options);
+        //}
 
 
     }

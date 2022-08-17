@@ -27,7 +27,6 @@ namespace BrokerLib.Lib
     }
     public class Candles
     {
-        private readonly BrokerDBContext _brokerContext;
         private MarketInfo _marketInfo = null;
         private TimeFrames _timeFrame = TimeFrames.H1;
         private LinkedList<Candle> _timeSeries = null;
@@ -50,7 +49,6 @@ namespace BrokerLib.Lib
             _selectedTimeSeries = new LinkedList<Candle>();
 
             //_candles = new List<Candle>();
-            _brokerContext = BrokerDBContext.newDBContext();
             _broker = broker;
         }
 
@@ -313,77 +311,45 @@ namespace BrokerLib.Lib
             return null;
         }
 
-        public bool CandlesInDB(DateTime fromDate, DateTime toDate, TimeFrames timeFrame) 
-        {
-            try
-            {
-                using (BrokerDBContext dataContext = BrokerDBContext.newDBContext())
-                {
-                    if (dataContext.Candles.AsNoTracking().Any(m => m.TimeFrame.Equals(timeFrame) &&
-                                             m.Timestamp >= fromDate &&
-                                             m.Timestamp <= toDate))
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return false;
-        }
+        //public bool CandlesInDB(DateTime fromDate, DateTime toDate, TimeFrames timeFrame) 
+        //{
+        //    try
+        //    {
+        //        using (BrokerDBContext dataContext = BrokerDBContext.newDBContext())
+        //        {
+        //            if (dataContext.Candles.AsNoTracking().Any(m => m.TimeFrame.Equals(timeFrame) &&
+        //                                     m.Timestamp >= fromDate &&
+        //                                     m.Timestamp <= toDate))
+        //            {
+        //                return true;
+        //            }
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        BrokerLib.DebugMessage(e);
+        //    }
+        //    return false;
+        //}
 
-        public bool CandlesInLocalDBContext(DateTime fromDate, DateTime toDate, TimeFrames timeFrame)
-        {
-            try
-            {
-                if (_brokerContext.Candles.Local.Any(m => m.TimeFrame.Equals(timeFrame) &&
-                                             m.Timestamp >= fromDate &&
-                                             m.Timestamp <= toDate))
-                {
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return false;
-        }
-        public List<Candle> GetCandlesFromDB(DateTime fromDate, DateTime toDate, TimeFrames timeFrame) 
-        {
-            try
-            {
-                using (BrokerDBContext dataContext = BrokerDBContext.newDBContext())
-                {
-                    List<Candle> candlesFromDB = dataContext.Candles.AsNoTracking().Where(m => m.TimeFrame.Equals(timeFrame) &&
-                                                          m.Timestamp >= fromDate &&
-                                                          m.Timestamp <= toDate).ToList();
-                }
+        //public List<Candle> GetCandlesFromDB(DateTime fromDate, DateTime toDate, TimeFrames timeFrame) 
+        //{
+        //    try
+        //    {
+        //        using (BrokerDBContext dataContext = BrokerDBContext.newDBContext())
+        //        {
+        //            List<Candle> candlesFromDB = dataContext.Candles.AsNoTracking().Where(m => m.TimeFrame.Equals(timeFrame) &&
+        //                                                  m.Timestamp >= fromDate &&
+        //                                                  m.Timestamp <= toDate).ToList();
+        //        }
  
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
-        }
-
-        public List<Candle> GetCandlesFromLocalDBContext(DateTime fromDate, DateTime toDate, TimeFrames timeFrame)
-        {
-            try
-            {
-                List<Candle> candlesFromDB = _brokerContext.Candles.Local.Where(m => m.TimeFrame.Equals(timeFrame) &&
-                                                                        m.Timestamp >= fromDate &&
-                                                                        m.Timestamp <= toDate).ToList();
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
-        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        BrokerLib.DebugMessage(e);
+        //    }
+        //    return null;
+        //}
 
         public List<Candle> GetHistoricalData(DateTime fromDate, DateTime toDate, TimeFrames timeFrame, int lastCount = -1) 
         {

@@ -28,6 +28,16 @@ namespace UnitTestsCore
         }
 
         [TestMethod]
+        public void TestPlusLesserThan()
+        {
+            string _expression = "1 + 2 > 2";
+            LogicExpressionParser _logicExpressionParser = new LogicExpressionParser();
+            LogicExpression _logicExpression = _logicExpressionParser.Parse(_expression);
+            bool result = _logicExpression.GetResult();
+            Assert.AreEqual<bool>(result, true, "Failed!");
+        }
+
+        [TestMethod]
         public void TestAnd()
         {
             string _expression = "2 < 3 and 3 > 2";
@@ -65,6 +75,30 @@ namespace UnitTestsCore
             LogicExpression _logicExpression = _logicExpressionParser.Parse(_expression);
             _logicExpression["a"].Set(3);
             _logicExpression["b"].Set(2);
+            bool result = _logicExpression.GetResult();
+            Assert.AreEqual<bool>(result, true, "Failed!");
+        }
+
+        [TestMethod]
+        public void TestVariablesGreaterThan_Float()
+        {
+            string _expression = "a > b";
+            LogicExpressionParser _logicExpressionParser = new LogicExpressionParser();
+            LogicExpression _logicExpression = _logicExpressionParser.Parse(_expression);
+            _logicExpression["a"].Set(3.2f);
+            _logicExpression["b"].Set(3.1f);
+            bool result = _logicExpression.GetResult();
+            Assert.AreEqual<bool>(result, true, "Failed!");
+        }
+
+        [TestMethod]
+        public void TestVariablesGreaterThan_Double()
+        {
+            string _expression = "a > b";
+            LogicExpressionParser _logicExpressionParser = new LogicExpressionParser();
+            LogicExpression _logicExpression = _logicExpressionParser.Parse(_expression);
+            _logicExpression["a"].Set(3.2);
+            _logicExpression["b"].Set(3.1);
             bool result = _logicExpression.GetResult();
             Assert.AreEqual<bool>(result, true, "Failed!");
         }
@@ -195,12 +229,12 @@ namespace UnitTestsCore
         public void TestVWAPMAPercentageBuyConditionFalse()
         {
             float percentage = 0.05f;
-            string _expression = String.Format("i_price:200_middle < ( i_VWAP_middle + i_SMA:200_middle ) * ( 1 - {0}) / 2", percentage);
+            string _expression = String.Format("i_price:200_middle < ( i_VWAP_middle + i_SMA:200_middle ) * ( 1 - {0} ) / 2", percentage);
             LogicExpressionParser _logicExpressionParser = new LogicExpressionParser();
             LogicExpression _logicExpression = _logicExpressionParser.Parse(_expression);
             _logicExpression["i_price:200_middle"].Set(100);
-            _logicExpression["i_VWAP_middle"].Set(105);
-            _logicExpression["i_SMA:200_middle"].Set(105);
+            _logicExpression["i_VWAP_middle"].Set(100);
+            _logicExpression["i_SMA:200_middle"].Set(100);
             bool result = _logicExpression.GetResult();
             Assert.AreEqual<bool>(result, false, "Failed!");
         }
@@ -222,13 +256,27 @@ namespace UnitTestsCore
         [TestMethod]
         public void TestVWAPMAPercentageSellConditionFalse()
         {
-            float percentage = 0.05f;
-            string _expression = String.Format("i_price:200_middle > ( i_VWAP_middle + i_SMA:200_middle ) * ( 1 + {0}) / 2", percentage);
+            string _expression = "i_price:200_middle > ( i_VWAP_middle + i_SMA:200_middle ) * 1.05 / 2";
             LogicExpressionParser _logicExpressionParser = new LogicExpressionParser();
             LogicExpression _logicExpression = _logicExpressionParser.Parse(_expression);
             _logicExpression["i_price:200_middle"].Set(100);
-            _logicExpression["i_VWAP_middle"].Set(95);
-            _logicExpression["i_SMA:200_middle"].Set(95);
+            _logicExpression["i_VWAP_middle"].Set(96);
+            _logicExpression["i_SMA:200_middle"].Set(96);
+            bool result = _logicExpression.GetResult();
+            Assert.AreEqual<bool>(result, false, "Failed!");
+        }
+
+        [TestMethod]
+        public void TestVWAPMAPercentageSellConditionFalse_WithVariable()
+        {
+            double percentage = 0.05;
+            string _expression = "i_price:200_middle > ( i_VWAP_middle + i_SMA:200_middle ) * ( 1 + a ) / 2";
+            LogicExpressionParser _logicExpressionParser = new LogicExpressionParser();
+            LogicExpression _logicExpression = _logicExpressionParser.Parse(_expression);
+            _logicExpression["i_price:200_middle"].Set(100);
+            _logicExpression["i_VWAP_middle"].Set(96);
+            _logicExpression["i_SMA:200_middle"].Set(96);
+            _logicExpression["a"].Set(percentage);
             bool result = _logicExpression.GetResult();
             Assert.AreEqual<bool>(result, false, "Failed!");
         }

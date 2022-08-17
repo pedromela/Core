@@ -75,11 +75,10 @@ namespace BotLib.Models
             try
             {
                 int count = -1;
-                List<ConditionStrategyData> strategies = null;
-                using (BotDBContext botContext = BotDBContext.newDBContext())
-                {
-                    strategies = botContext.GetStrategiesFromDB();
-                }
+                List<ConditionStrategyData> strategies = BotDBContext.Execute(botContext => {
+                    return botContext.GetStrategiesFromDB();
+                });
+
                 count = strategies.Count;
                 int idx = RandomGenerator.RandomNumber(0, count);
                 return strategies[idx].id;

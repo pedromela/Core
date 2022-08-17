@@ -32,6 +32,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BacktesterLib", "Backtester
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dashboard", "Dashboard\Dashboard.csproj", "{6ACFE2F7-1215-41FF-8741-878820876E61}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LoginLib", "LoginLib\LoginLib.csproj", "{2596D491-ECC3-4CF7-9D35-A1C6001E8133}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -78,6 +80,10 @@ Global
 		{6ACFE2F7-1215-41FF-8741-878820876E61}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6ACFE2F7-1215-41FF-8741-878820876E61}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6ACFE2F7-1215-41FF-8741-878820876E61}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2596D491-ECC3-4CF7-9D35-A1C6001E8133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2596D491-ECC3-4CF7-9D35-A1C6001E8133}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2596D491-ECC3-4CF7-9D35-A1C6001E8133}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2596D491-ECC3-4CF7-9D35-A1C6001E8133}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

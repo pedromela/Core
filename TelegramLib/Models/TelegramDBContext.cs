@@ -27,7 +27,7 @@ namespace TelegramLib.Models
 
         public TelegramDBContext(DbContextOptions<TelegramDBContext> options) : base(options)
         {
-
+            this.Database.EnsureCreated();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -24,6 +24,7 @@ namespace TelegramLib.Models
             {
                 using (TelegramDBContext telegramContext = TelegramDBContext.newDBContext())
                 {
+                    id = Guid.NewGuid().ToString();
                     telegramContext.TelegramParameters.Add(this);
                     telegramContext.SaveChanges();
                 }

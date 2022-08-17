@@ -453,7 +453,7 @@ namespace SignalsEngine.Indicators
                     _lastCandle.TimeFrame = lastCandle.TimeFrame;
                     _lastCandle.Timestamp = lastCandle.Timestamp;
                     _lastCandle.Symbol = MarketInfo.GetMarket();
-                    StoreLastValue(_lastCandle, line.Key);
+                    //StoreLastValue(_lastCandle, line.Key);
                 }
             }
         }
