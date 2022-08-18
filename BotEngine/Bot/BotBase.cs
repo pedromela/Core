@@ -526,18 +526,10 @@ namespace BotEngine.Bot
                 buyFitness = CalculateBuyFitness();
                 if (buyFitness > FitnessLimit)
                 {
-                    if (_botParameters.BotName.Equals("macdcross-ada"))
-                    {
-                        Console.WriteLine("macdcross-ada DEBUG");
-                    }
                     ProcessTransactions(lastCandle, sellTransactions, TransactionType.buy);
                 }
                 else if (buyFitness < -FitnessLimit)
                 {
-                    if (_botParameters.BotName.Equals("macdcross-ada"))
-                    {
-                        Console.WriteLine("macdcross-ada DEBUG");
-                    }
                     buyFitness = -buyFitness;
                     ProcessTransactions(lastCandle, buyTransactions, TransactionType.sell);
                 }

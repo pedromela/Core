@@ -128,10 +128,6 @@ namespace SignalsEngine
         {
             try
             {
-                if (MarketInfo.GetMarket().Equals("BTCUSD") && TimeFrame == TimeFrames.M1)
-                {
-                    Console.WriteLine("DEBUG");
-                }
                 if (!base.Validate(indicator))
                 {
                     return false;

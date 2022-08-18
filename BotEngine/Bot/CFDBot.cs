@@ -42,10 +42,6 @@ namespace BotEngine.Bot
                 buyFitness = CalculateBuyFitness();
                 if (buyFitness > FitnessLimit)
                 {
-                    if (_botParameters.BotName.Equals("macdcross-ada"))
-                    {
-                        Console.WriteLine("macdcross-ada DEBUG");
-                    }
                     if (buyFitness < 1.0f)
                     {
                         buyFitness = 1.0f;
@@ -91,10 +87,6 @@ namespace BotEngine.Bot
                 }
                 else if (buyFitness < -FitnessLimit)
                 {
-                    if (_botParameters.BotName.Equals("macdcross-ada"))
-                    {
-                        Console.WriteLine("macdcross-ada DEBUG");
-                    }
                     buyFitness = -buyFitness;
                     if (buyFitness < 1.0f)
                     {
