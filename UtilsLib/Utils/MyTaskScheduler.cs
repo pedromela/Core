@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace UtilsLib.Utils
 {
@@ -14,6 +12,14 @@ namespace UtilsLib.Utils
         private MyTaskScheduler() { }
 
         public static MyTaskScheduler Instance => _instance ?? (_instance = new MyTaskScheduler());
+
+        public void Dispose(string taskId)
+        {
+            if (timers.ContainsKey(taskId))
+            {
+                timers[taskId].Dispose();
+            }
+        }
 
         public void ScheduleTask(Action task, string taskId, float intervalInHour)
         {

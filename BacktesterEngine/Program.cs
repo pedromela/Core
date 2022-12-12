@@ -19,7 +19,7 @@ namespace BacktesterEngine
 
             //backtesterEngine.Run();
             //backtesterEngine.BacktestAllBots();
-            backtesterEngine.BacktestBot("6262b108-7be4-4668-9192-f1d248f17d8c", fromDate, toDate, null);
+            backtesterEngine.BacktestBot("010365c1-0246-4b02-b629-e1b1c0dafd9b", fromDate, toDate, null);
             //backtesterEngine.BacktestTelegramBot(2010);
             //backtesterEngine.BacktestInvertedTelegramBot(2009);
             //backtesterEngine.BacktestAllTelegramBots();

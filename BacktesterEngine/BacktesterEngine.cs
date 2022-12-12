@@ -37,6 +37,8 @@ namespace BacktesterEngine
             _fromDate = fromDate;
             _toDate = toDate;
             BotLib.BotLib.Backtest = true;
+            BotDBContext.InitProviders();
+            BrokerDBContext.InitProviders();
             //Run();
         }
 
@@ -124,8 +126,6 @@ namespace BacktesterEngine
         {
             try
             {
-                BotDBContext.InitProviders();
-                BrokerDBContext.InitProviders();
                 foreach (var provider in BrokerDBContext.providers)
                 {
                     using (BrokerDBContext brokerContext = (BrokerDBContext)provider.GetDBContext())
@@ -220,6 +220,16 @@ namespace BacktesterEngine
                     return botContext.BotsParameters.Find(BotId);
                 });
                 CleanBotBacktestingData(BotId);
+                var complete = new BacktestData();
+                var score = new BacktesterScore();
+                score.Positions = -2;
+                score.Successes = -2;
+                if (botParameters == null)
+                {
+                    complete.Update(score, DateTime.Now, null, null, null, null, BacktestingState.error);
+                    observer?.OnNext(complete);
+                    return;
+                }
                 InitBot(botParameters, fromDate, toDate);
                 BotBase bot = _botDict[botParameters.TimeFrame][botParameters.id];
                 IndicatorsEngine indicatorsEngine = _signalsEngineDict[bot._signalsEngineId];
@@ -237,18 +247,16 @@ namespace BacktesterEngine
                     {
                         bot._backtestData.State = first ? BacktestingState.first : BacktestingState.running;
                         first = false;
-                        observer.OnNext(bot._backtestData);
+                        observer?.OnNext(bot._backtestData);
                         bot.BacktestDataReset();
                     }
                     count++;
                 }
                 BacktesterEngine.DebugMessage($"Backtest {bot._botParameters.id} completed!");
-                var score = new BacktesterScore();
                 score.Positions = -2;
                 score.Successes = -2;
-                var complete = new BacktestData();
                 complete.Update(score, DateTime.Now, null, null, null, null, BacktestingState.completed);
-                observer.OnNext(complete);
+                observer?.OnNext(complete);
             }
             catch (Exception e)
             {

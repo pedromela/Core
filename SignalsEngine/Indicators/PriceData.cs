@@ -569,8 +569,11 @@ namespace SignalsEngine.Indicators
                         List<Candle> candlesToSave = new List<Candle>();
 
                         candlesToSave.AddRange(candleList);
-
-                        candlesToSave = Candle.SaveCandlesInDB(candlesToSave);
+                        
+                        if (!BotLib.BotLib.Backtest) 
+                        {
+                            candlesToSave = Candle.SaveCandlesInDB(candlesToSave);
+                        }
 
                         candlesToInsert.Add(missingCandleInterval._index, candlesToSave);
                         //candles.InsertRange(missingCandleInterval._index, candlesToSave);
