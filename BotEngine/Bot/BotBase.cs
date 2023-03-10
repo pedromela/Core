@@ -62,7 +62,6 @@ namespace BotEngine.Bot
     public abstract class BotBase
     {
         public readonly BacktesterDBContext _backtesterContext;
-        public bool _backtest = false;
 
         protected Broker _broker = null;
         protected IndicatorsEngine _signalsEngine = null;
@@ -95,7 +94,6 @@ namespace BotEngine.Bot
         {
             _botParameters = botParameters;
             _signalsEngineId = IndicatorsEngine.DecideSignalsEngineId(botParameters.BrokerId, botParameters.Market == null ? "" : botParameters.Market);
-            _backtest = backtest;
             BrokerDescription brokerDescription = new BrokerDescription(_botParameters.BrokerId, _botParameters.BrokerType);
             _broker = Broker.DecideBroker(brokerDescription);
             _transactionsDict = new Dictionary<TransactionType, Dictionary<string, Transaction>>(); 
@@ -309,7 +307,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                //if (_backtest)
+                //if (BotLib.BotLib.Backtest)
                 //{
                 //    List<BacktesterTransaction> transactions = null;
                 //    using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
@@ -342,7 +340,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                //if (_backtest)
+                //if (BotLib.BotLib.Backtest)
                 //{
                 //    List<BacktesterTransaction> transactions = null;
                 //    using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
@@ -379,7 +377,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (_backtest)
+                if (BotLib.BotLib.Backtest)
                 {
                     using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
                     {
@@ -406,7 +404,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (_backtest)
+                if (BotLib.BotLib.Backtest)
                 {
                     List<BacktesterTransaction> transactions = null;
                     using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
@@ -976,7 +974,7 @@ namespace BotEngine.Bot
                     int idebug = 0;
                 }
 
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     if (_tradesDict.ContainsKey(t.Type))
                     {
@@ -1008,7 +1006,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     AccessPoint accessPoint = AccessPoint.Construct(trade.AccessPointId);
                     if (accessPoint == null || string.IsNullOrEmpty(accessPoint.id))
@@ -1041,7 +1039,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     List<UserBotRelation> userBotRelations = null;
 
@@ -1325,7 +1323,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (_backtest)
+                if (BotLib.BotLib.Backtest)
                 {
                     return new BacktesterTransaction();
                 }
@@ -1345,7 +1343,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (_backtest)
+                if (BotLib.BotLib.Backtest)
                 {
                     return new BacktesterTransaction(transaction);
                 }
@@ -1365,7 +1363,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     Trade trade = BrokerDBContext.Execute(brokerContext => {
                         return brokerContext.Trades.Find(t.id);
@@ -1416,7 +1414,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     Transaction transaction = BrokerDBContext.Execute(brokerContext => {
                         return brokerContext.Transactions.Find(t.id);
@@ -1602,7 +1600,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (_backtest)
+                if (BotLib.BotLib.Backtest)
                 {
                     using (var context = BacktesterDBContext.newDBContext())
                     {

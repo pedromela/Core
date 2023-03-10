@@ -188,7 +188,7 @@ namespace SignalsEngine.Indicators
             {
                 if (Values.Last == null)
                 {
-                    SignalsEngine.DebugMessage(String.Format("Indicator::GetLastValue() : {0} Error last value is NULL."));
+                    SignalsEngine.DebugMessage("Indicator::GetLastValue() : Error last value is NULL.");
                     return null;
                 }
                 return Values.Last.Value;

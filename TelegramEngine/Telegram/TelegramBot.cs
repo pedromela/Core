@@ -359,7 +359,7 @@ namespace TelegramEngine.Telegram
         {
             try
             {
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     List<Trade> trades = BrokerDBContext.Execute(brokerContext => {
                         return brokerContext.Trades.Where(m => m.TransactionId == t.id).ToList();

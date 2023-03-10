@@ -327,7 +327,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     List<UserBotRelation> userBotRelations = null;
                     
@@ -353,7 +353,7 @@ namespace BotEngine.Bot
         {
             try
             {
-                if (!_backtest)
+                if (!BotLib.BotLib.Backtest)
                 {
                     List<UserBotRelation> userBotRelations = null;
 

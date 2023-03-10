@@ -13,16 +13,38 @@ namespace BacktesterEngine
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("pt-PT");
-            DateTime fromDate = DateTime.Today.ToUniversalTime().AddDays(-8);
+            DateTime fromDate = DateTime.Today.ToUniversalTime().AddDays(-7);
             DateTime toDate = DateTime.Today.ToUniversalTime().AddDays(-1);
             BacktesterEngine backtesterEngine = new BacktesterEngine(fromDate, toDate);
 
             //backtesterEngine.Run();
             //backtesterEngine.BacktestAllBots();
-            backtesterEngine.BacktestBot("010365c1-0246-4b02-b629-e1b1c0dafd9b", fromDate, toDate, null);
+            backtesterEngine.BacktestBot("e3da2c25-d87f-4ed6-a1bf-e889fb845842", fromDate, toDate, null);
             //backtesterEngine.BacktestTelegramBot(2010);
             //backtesterEngine.BacktestInvertedTelegramBot(2009);
             //backtesterEngine.BacktestAllTelegramBots();
         }
+        const string alphabet = "abcdefghijklmnopqrstuvwxyz";
+
+        //public static string Solution(string word, string cipher)
+        //{
+        //    // Type your solution here
+        //    if (cipher.Length != alphabet.Length)
+        //    {
+        //        return "";
+        //    }
+        //    string cipheredWord = "";
+        //    for (int i = 0; i < word.Length; i++)
+        //    {
+        //        cipheredWord += CipherLetter(word[i], cipher);
+        //    }
+        //    return cipheredWord;
+        //}
+
+        //public static char CipherLetter(char c, string cipher)
+        //{
+        //    int alphaIdx = alphabet.IndexOf(c);
+        //    return cipher[alphaIdx];
+        //}
     }
 }

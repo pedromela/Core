@@ -250,6 +250,7 @@ namespace BacktesterEngine
                         observer?.OnNext(bot._backtestData);
                         bot.BacktestDataReset();
                     }
+                    bot._score.Update();
                     count++;
                 }
                 BacktesterEngine.DebugMessage($"Backtest {bot._botParameters.id} completed!");
@@ -304,7 +305,7 @@ namespace BacktesterEngine
                     DateTime toDate = _telegramContext.TelegramTransactions.Select(m => m.Timestamp).Max();
 
                     TelegramBot bot = new TelegramBot(telegramParameters);
-                    bot._backtest = true;
+                    //bot._backtest = true;
 
                     fromDate = DateTimeExtensions.Normalize(fromDate, (int)bot._botParameters.TimeFrame);
                     toDate = DateTimeExtensions.Normalize(toDate, (int)bot._botParameters.TimeFrame);
