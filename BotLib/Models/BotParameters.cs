@@ -44,9 +44,9 @@ namespace BotLib.Models
         [Column(TypeName = "float")]
         public float Increase { get; set; }
         [Column(TypeName = "int")]
-        public bool SmartBuyTransactions { get; set; }
+        public bool SmartBuyTransactions { get; set; }// to be removed
         [Column(TypeName = "int")]
-        public bool SmartSellTransactions { get; set; }
+        public bool SmartSellTransactions { get; set; }// to be removed
         [Column(TypeName = "int")]
         public bool StopLoss { get; set; }
         [Column(TypeName = "int")]
@@ -60,14 +60,14 @@ namespace BotLib.Models
         [Column(TypeName = "float")]
         public float DownPercentage { get; set; }
         [Column(TypeName = "int")]
-        public int minSmartBuyTransactions { get; set; }
+        public int minSmartBuyTransactions { get; set; }// to be removed
         [Column(TypeName = "int")]
-        public int minSmartSellTransactions { get; set; }
+        public int minSmartSellTransactions { get; set; }// to be removed
         public int InitLastProfitablePrice { get; set; }
         [Column(TypeName = "int")]
-        public int StopAfterStopLossMinutes { get; set; }
+        public int StopAfterStopLossMinutes { get; set; }// to be removed
         [Column(TypeName = "int")]
-        public int StopLossMaxAtemptsBeforeStopBuying { get; set; }
+        public int StopLossMaxAtemptsBeforeStopBuying { get; set; }// to be removed
         [Column(TypeName = "nvarchar(50)")]
         public string Market { get; set; }
         [Column(TypeName = "bigint")]

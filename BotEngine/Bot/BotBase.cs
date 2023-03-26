@@ -478,7 +478,7 @@ namespace BotEngine.Bot
                 int sellTransactionsByFrame = 0;
                 foreach (var t in transactions)
                 {
-                    if (_botParameters.MaxSellTransactionsByFrame > 0 && sellTransactionsByFrame > _botParameters.MaxSellTransactionsByFrame)
+                    if (_botParameters.MaxSellTransactionsByFrame > 0 && sellTransactionsByFrame >= _botParameters.MaxSellTransactionsByFrame)
                     {
                         break;
                     }
