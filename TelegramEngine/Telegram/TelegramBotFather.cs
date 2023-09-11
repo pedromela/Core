@@ -72,7 +72,7 @@ namespace TelegramEngine.Telegram
         {
             try
             {
-                Task<Message> res = _bot.SendTextMessageAsync("@m4d32tr4d3", message);
+                Task<Message> res = _bot.SendTextMessageAsync("@m4d32tr4d3free", message);
                 res.Wait();
                 TelegramEngine.DebugMessage(res.Result.Text);
             }

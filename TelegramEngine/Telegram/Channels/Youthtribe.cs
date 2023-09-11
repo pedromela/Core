@@ -7,7 +7,7 @@ using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram.Channels
 {
-    class Youthtribe : Channel
+    public class Youthtribe : Channel
     {
         public const string URL = "https://t.me/s/youthtribefx";
 

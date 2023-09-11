@@ -439,8 +439,10 @@ namespace SignalsEngine.Indicators
             }
         }
 
-        public void UpdateIndicators(TimeFrames timeFrame) 
+        public Price UpdateCandleData(TimeFrames timeFrame)
         {
+            bool success = false;
+            Price timeSeries = null;
             try
             {
                 if (IndicatorsSharedData.Instance.ContainsCandleData(_marketInfo.GetMarketDescription(), timeFrame) && IndicatorsSharedData.Instance.ContainsIndicators(_marketInfo.GetMarketDescription(), timeFrame))
@@ -461,7 +463,6 @@ namespace SignalsEngine.Indicators
                         }
                     }
 
-                    Price timeSeries = null;
                     if (_backtest)
                     {
                         IncludeNextCandleInSelection(timeFrame);
@@ -473,7 +474,6 @@ namespace SignalsEngine.Indicators
                     }
 
                     int retries = 3;
-                    bool success = false;
                     for (int retry = 0; retry < retries; retry++)
                     {
                         try
@@ -489,7 +489,7 @@ namespace SignalsEngine.Indicators
                                 DebugMessage(String.Format("UpdateIndicators({0}, {1}, {2}): Getting last candle failed! Retry {2}", _brokerId.ToString(), _marketInfo.GetMarket(), retry + 1, timeFrame));
                                 if (retry == retries - 1)
                                 {
-                                    return;
+                                    return success ? timeSeries : null;
                                 }
                                 Thread.Sleep(1000);
                             }
@@ -499,68 +499,80 @@ namespace SignalsEngine.Indicators
                             DebugMessage(String.Format("UpdateIndicators({0}, {1}, {2}): Getting last candle failed! Retry {2} Exception!", _brokerId.ToString(), _marketInfo.GetMarket(), retry + 1, timeFrame));
                             if (retry == retries - 1)
                             {
-                                return;
+                                return success ? timeSeries : null;
                             }
                             Thread.Sleep(1000);
                         }
                     }
-
-                    if (success)
-                    {
-                        Dictionary<string, Indicator> indicators = IndicatorsSharedData.Instance.GetIndicators(_marketInfo.GetMarketDescription(), timeFrame);
-                        var level0Indicators = indicators.Where(i => i.Value.InputName == PriceData.NAME && i.Value.ShortName != PriceData.NAME);
-                        var level1Indicators = indicators.Where(i => i.Value.InputName != PriceData.NAME && i.Value.ShortName != PriceData.NAME);
-                        Task[] level0LoadingTaks = new Task[level0Indicators.Count()];
-                        Task[] level1LoadingTaks = new Task[level1Indicators.Count()];
-                        int i = 0;
-
-                        foreach (var pair in level0Indicators)
-                        {
-                            level0LoadingTaks[i++] = Task.Run(() =>
-                            {
-                                if (_backtest)
-                                {
-                                    pair.Value.Store = false;
-                                }
-                                pair.Value.CalculateNext(timeSeries);
-                            });
-                        }
-
-                        Task.WaitAll(level0LoadingTaks);
-
-                        foreach (var task in level0LoadingTaks)
-                        {
-                            task.Dispose();
-                        }
-
-                        i = 0;
-
-                        foreach (var pair in level1Indicators)
-                        {
-                            level1LoadingTaks[i++] = Task.Run(() =>
-                            {
-                                if (_backtest)
-                                {
-                                    pair.Value.Store = false;
-                                }
-                                Indicator indicator = IndicatorsSharedData.Instance.GetIndicator(_marketInfo.GetMarketDescription(), pair.Value.InputName, timeFrame);
-                                pair.Value.CalculateNext(indicator);
-                            });
-                        }
-
-                        Task.WaitAll(level1LoadingTaks);
-
-                        foreach (var task in level1LoadingTaks)
-                        {
-                            task.Dispose();
-                        }
-
-                        BrokerBulkStore.Instance.SaveChanges();
-                    }
                 }
                 else
                 {
-                    DebugMessage("UpdateIndicators(" + _brokerId.ToString() + ", " + _marketInfo.GetMarket() + "): something is missing!");
+                    DebugMessage("UpdateIndicators(" + _brokerId.ToString() + ", " + _marketInfo.GetMarket() + "): candle data is missing!");
+                }
+            }
+            catch (Exception e)
+            {
+                DebugMessage(e);
+            }
+            return success ? timeSeries : null;
+        }
+
+        public void UpdateIndicators(TimeFrames timeFrame) 
+        {
+            try
+            {
+                Price timeSeries = UpdateCandleData(timeFrame);
+                if (timeSeries != null)
+                {
+                    Dictionary<string, Indicator> indicators = IndicatorsSharedData.Instance.GetIndicators(_marketInfo.GetMarketDescription(), timeFrame);
+                    var level0Indicators = indicators.Where(i => i.Value.InputName == PriceData.NAME && i.Value.ShortName != PriceData.NAME);
+                    var level1Indicators = indicators.Where(i => i.Value.InputName != PriceData.NAME && i.Value.ShortName != PriceData.NAME);
+                    Task[] level0LoadingTaks = new Task[level0Indicators.Count()];
+                    Task[] level1LoadingTaks = new Task[level1Indicators.Count()];
+                    int i = 0;
+
+                    foreach (var pair in level0Indicators)
+                    {
+                        level0LoadingTaks[i++] = Task.Run(() =>
+                        {
+                            if (_backtest)
+                            {
+                                pair.Value.Store = false;
+                            }
+                            pair.Value.CalculateNext(timeSeries);
+                        });
+                    }
+
+                    Task.WaitAll(level0LoadingTaks);
+
+                    foreach (var task in level0LoadingTaks)
+                    {
+                        task.Dispose();
+                    }
+
+                    i = 0;
+
+                    foreach (var pair in level1Indicators)
+                    {
+                        level1LoadingTaks[i++] = Task.Run(() =>
+                        {
+                            if (_backtest)
+                            {
+                                pair.Value.Store = false;
+                            }
+                            Indicator indicator = IndicatorsSharedData.Instance.GetIndicator(_marketInfo.GetMarketDescription(), pair.Value.InputName, timeFrame);
+                            pair.Value.CalculateNext(indicator);
+                        });
+                    }
+
+                    Task.WaitAll(level1LoadingTaks);
+
+                    foreach (var task in level1LoadingTaks)
+                    {
+                        task.Dispose();
+                    }
+
+                    BrokerBulkStore.Instance.SaveChanges();
                 }
             }
             catch (Exception e)

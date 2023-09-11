@@ -2,12 +2,12 @@
 using BotLib.Models;
 using BrokerLib.Brokers;
 using BrokerLib.Models;
+using SignalsEngine.Indicators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using TelegramEngine.Telegram.Channels;
 using TelegramLib.Models;
-using UtilsLib.Utils;
 using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram
@@ -17,21 +17,12 @@ namespace TelegramEngine.Telegram
         public TelegramScrapper _scrapper = null;
         public readonly TelegramDBContext _telegramContext;
         public bool first = true;
-        public TelegramBot(BotParameters botParameters, Channel channel)
-        : base(botParameters)
+        public TelegramBot(BotParameters botParameters, Channel channel, bool backtest = false)
+        : base(botParameters, backtest)
         {
-            _broker = Broker.DecideBroker(botParameters.BrokerDescription);
+            //_broker = Broker.DecideBroker(botParameters.BrokerDescription);
             _botParameters.BrokerId = Brokers.OANDA;
             _scrapper = new TelegramScrapper(channel);
-            _telegramContext = TelegramDBContext.newDBContext();
-        }
-
-        public TelegramBot(TelegramParameters telegramParameters)
-        : base(telegramParameters)
-        {
-            _broker = Broker.DecideBroker(telegramParameters.BrokerDescription);
-            _botParameters.BrokerId = Brokers.OANDA;
-            _scrapper = new TelegramScrapper(Channel.DecideChannel(telegramParameters.Channel));
             _telegramContext = TelegramDBContext.newDBContext();
         }
 
@@ -56,30 +47,32 @@ namespace TelegramEngine.Telegram
             return 0;
         }
 
-        public Transaction GetTransactionFromTelegramTransaction(TelegramTransaction telegramTransaction, float takeProfit)
+        public Transaction GetTransactionFromTelegramTransaction(TelegramTransaction telegramTransaction, float takeProfit, string description)
         {
             try
             {
                 Transaction t = DecideTransactionType();
                 if (telegramTransaction.Type == TransactionType.buy)
                 {
+                    var lastCandles = IndicatorsSharedData.Instance.GetLastCandles(new BrokerLib.Market.MarketDescription(telegramTransaction.Market, MarketTypes.Forex, BrokerType.margin), _botParameters.TimeFrame);
+                    var candle = lastCandles.LastOrDefault() ?? new Candle();
                     t.Amount = 100;
-                    //TODO: t.AmountEUR , function to get eur amount
-                    //get EUR/currency 1 and after convert currency 1 amount(normally 100) to eur
+                    t.AmountSymbol2 = candle.Open > 0 ? t.Amount/candle.Open : 100;
                 }
                 else if (telegramTransaction.Type == TransactionType.sell)
                 {
-                    //TODO: t.AmountEUR , function to get eur amount
-                    //get EUR/currency 1 and after convert currency 1 amount(normally 100) to eur
+                    var lastCandles = IndicatorsSharedData.Instance.GetLastCandles(new BrokerLib.Market.MarketDescription(telegramTransaction.Market, MarketTypes.Forex, BrokerType.margin), _botParameters.TimeFrame);
+                    var candle = lastCandles.LastOrDefault() ?? new Candle();
                     t.Amount = -100;
+                    t.AmountSymbol2 = candle.Open > 0 ? t.Amount / candle.Open : 100;
                 }
                 else
                 {
                     return null;
                 }
-
+                t.id = telegramTransaction.id + description;
                 t.BotId = _botParameters.id;
-                t.TelegramTransactionId = telegramTransaction.id.ToString();
+                t.TelegramTransactionId = telegramTransaction.id ?? string.Empty;
                 t.Market = telegramTransaction.Market;
                 t.Type = telegramTransaction.Type;
                 t.Price = telegramTransaction.EntryValue;
@@ -96,6 +89,17 @@ namespace TelegramEngine.Telegram
             return null;
         }
 
+        public List<Transaction> GetTransactionsFromTelegramTransactions(List<TelegramTransaction> telegramTransactions)
+        {
+            List<Transaction> transactions = new List<Transaction>();
+            foreach (var telegramTransaction in telegramTransactions)
+            {
+                transactions.AddRange(GetTransactionsFromTelegramTransaction(telegramTransaction));
+            }
+            return transactions;
+
+        }
+
         public List<Transaction> GetTransactionsFromTelegramTransaction(TelegramTransaction telegramTransaction) 
         {
             List<Transaction> transactions = new List<Transaction>();
@@ -107,15 +111,15 @@ namespace TelegramEngine.Telegram
                 }
                 if (telegramTransaction.TakeProfit > 0)
                 {
-                    transactions.Add(GetTransactionFromTelegramTransaction(telegramTransaction, telegramTransaction.TakeProfit));
+                    transactions.Add(GetTransactionFromTelegramTransaction(telegramTransaction, telegramTransaction.TakeProfit, "tp1"));
                 }
                 if (telegramTransaction.TakeProfit2 > 0)
                 {
-                    transactions.Add(GetTransactionFromTelegramTransaction(telegramTransaction, telegramTransaction.TakeProfit3));
+                    transactions.Add(GetTransactionFromTelegramTransaction(telegramTransaction, telegramTransaction.TakeProfit3, "tp2"));
                 }
                 if (telegramTransaction.TakeProfit3 > 0)
                 {
-                    transactions.Add(GetTransactionFromTelegramTransaction(telegramTransaction, telegramTransaction.TakeProfit3));
+                    transactions.Add(GetTransactionFromTelegramTransaction(telegramTransaction, telegramTransaction.TakeProfit3, "tp3"));
                 }
             }
             catch (Exception e)
@@ -141,7 +145,7 @@ namespace TelegramEngine.Telegram
                         return null;
                     }
 
-                    if (telegramTransaction == null)
+                    if (telegramTransaction == null || !telegramTransaction.IsConsistent())
                     {
                         return null;
                     }
@@ -151,7 +155,8 @@ namespace TelegramEngine.Telegram
                     List<Transaction> botTransactions = GetTransactionsFromTelegramTransaction(telegramTransaction);
                     foreach (Transaction t in botTransactions)
                     {
-                        t.TelegramTransactionId = telegramTransaction.id;
+                        t.id = telegramTransaction.id ?? Guid.NewGuid().ToString();
+                        t.TelegramTransactionId ??= Guid.NewGuid().ToString();
                         SubscribedUsersOrder(t);
                     }
                     allBotTransactions.AddRange(botTransactions);
@@ -159,6 +164,7 @@ namespace TelegramEngine.Telegram
 
                     using (TelegramDBContext telegramContext = TelegramDBContext.newDBContext())
                     {
+                        telegramTransaction.id ??= Guid.NewGuid().ToString();
                         telegramContext.TelegramTransactions.Add(telegramTransaction);
                         telegramContext.SaveChanges();
                     }
@@ -227,6 +233,10 @@ namespace TelegramEngine.Telegram
         {
             try
             {
+                if (t.Timestamp > lastCandle.Timestamp)
+                {
+                    return 0;
+                }
                 float currentProfit = 0.0F;
                 float profit = 0;
                 float fitness = CalculateSellOrderFitness(t, lastCandle, ref profit);
@@ -255,7 +265,7 @@ namespace TelegramEngine.Telegram
                 
                 currentProfit += profit;
 
-                StoreChannelScore(t, profit);
+                //StoreChannelScore(t, profit);
 
                 return currentProfit;
             }
@@ -422,14 +432,13 @@ namespace TelegramEngine.Telegram
 
                     if (!context.ChannelScores.Any(s => s.BotParametersId == _botParameters.id))
                     {
-                        TelegramTransaction telegramTransaction = context.TelegramTransactions.Find(t.TelegramTransactionId);
                         score = new ChannelScore();
                         score.Positions = 0;
                         score.BotParametersId = _botParameters.id;
                         score.Successes = 0;
                         score.ActiveTransactions = 0;
                         score.CurrentProfit = 0.0f;
-                        score.ChannelName = telegramTransaction.Channel;
+                        score.ChannelName = _botParameters.Channel;
                         context.ChannelScores.Add(score);
                         context.SaveChanges();
                     }
@@ -464,12 +473,37 @@ namespace TelegramEngine.Telegram
         //////////////////////// STATIC FUNCTIONS /////////////////////////
         ///////////////////////////////////////////////////////////////////
 
-        public static TelegramBot GenerateTelegramBotFromParameters(TelegramParameters telegramParameters)
+        public static TelegramBot GenerateTelegramBotFromParameters(TelegramParameters telegramParameters, bool backtest = false)
         {
             try
             {
-                TelegramBot bot = new TelegramBot(telegramParameters, Channel.DecideChannel(telegramParameters.Channel));
+                TelegramBot bot = new TelegramBot(telegramParameters, Channel.DecideChannel(telegramParameters.Channel), true);
                 //bot.RecreateSmartSellTransactions(telegramParameters.SmartSellTransactions);
+                return bot;
+            }
+            catch (Exception e)
+            {
+                TelegramEngine.DebugMessage(e);
+            }
+            return null;
+        }
+
+        public static TelegramBot GenerateTelegramBotFromChannelUrl(string channelUrl, TimeFrames timeFrame, bool backtest = false)
+        {
+            try
+            {
+                TelegramParameters telegramParameters = new TelegramParameters()
+                {
+                    id = Guid.NewGuid().ToString(),
+                    TimeFrame = timeFrame,
+                    Channel = channelUrl,
+                    BrokerDescription = new BrokerDescription(Brokers.OANDA, BrokerType.margin),
+                    TakeProfit = true,
+                    StopLoss = true,
+                    TrailingStop = false,
+                    LockProfits = false,
+                };
+                TelegramBot bot = new TelegramBot(telegramParameters, new CustomChannel(channelUrl), backtest);
                 return bot;
             }
             catch (Exception e)
@@ -486,6 +520,7 @@ namespace TelegramEngine.Telegram
                 BotParameters botParameters = GenerateRandomBotParameters(TimeFrames.M1, "", null, null, null, false);
                 TelegramParameters telegramParameters = new TelegramParameters(botParameters);
                 telegramParameters.Channel = channelId == -1 ? Channel.RandomChannelURL() : Channel.DecideChannelURL(channelId);
+                telegramParameters.BrokerDescription.BrokerId = Brokers.OANDA;
                 return GenerateTelegramBotFromParameters(telegramParameters);
             }
             catch (Exception e)

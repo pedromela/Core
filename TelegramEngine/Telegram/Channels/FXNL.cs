@@ -7,7 +7,7 @@ using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram.Channels
 {
-    class FXNL : Channel
+    public  class FXNL : Channel
     {
         public const string URL = "https://t.me/s/freesignalsfxnl";
 

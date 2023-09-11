@@ -7,7 +7,7 @@ using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram.Channels
 {
-    class EasyForexPips : Channel
+    public class EasyForexPips : Channel
     {
         public const string URL = "https://t.me/s/easyforexpips";
 

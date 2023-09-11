@@ -40,7 +40,7 @@ namespace TelegramEngine.Telegram
                 var html = htmlDoc.DocumentNode.SelectNodes("/html");
 
                 //var entrys1 = htmlDoc.DocumentNode.SelectNodes("/html/body/main/div/section");
-                var entrys = htmlDoc.DocumentNode.SelectNodes("/html/body/main/div/section/div/div[@class='tgme_widget_message js-widget_message']/div[@class='tgme_widget_message_bubble']/div[@class='tgme_widget_message_text js-message_text']");
+                var entrys = htmlDoc.DocumentNode.SelectNodes("//div[@class='tgme_widget_message_text js-message_text']");
 
                 //var entrys = htmlDoc.DocumentNode.SelectNodes("/html/body/main/div/section/div[@class='tgme_widget_message_bubble']/div[@class='tgme_widget_message_text js-message_text']");
 
@@ -53,7 +53,7 @@ namespace TelegramEngine.Telegram
                 for (int i = entrys.Count; i > 0; i--)
                 {
                     TelegramTransaction last = GetLastTransaction();
-                    TelegramTransaction result = _channel.Parse(entrys[i - 1].InnerText);
+                    TelegramTransaction result = _channel.Parse(RemoveUnwantedTags(entrys[i - 1].InnerHtml));
                     if ((last == null || !last.IsEqual(result)) && result != null)
                     {
                         TelegramEngine.DebugMessage(entrys[i - 1].InnerText);
@@ -86,6 +86,42 @@ namespace TelegramEngine.Telegram
                 TelegramEngine.DebugMessage(e.StackTrace);
             }
             return null;
+        }
+
+        internal static string RemoveUnwantedTags(string data)
+        {
+            if (string.IsNullOrEmpty(data)) return string.Empty;
+
+            var document = new HtmlDocument();
+            document.LoadHtml(data);
+
+            var acceptableTags = new String[] { "br" };
+
+            var nodes = new Queue<HtmlNode>(document.DocumentNode.SelectNodes("./*|./text()"));
+            while (nodes.Count > 0)
+            {
+                var node = nodes.Dequeue();
+                var parentNode = node.ParentNode;
+
+                if (!acceptableTags.Contains(node.Name) && node.Name != "#text")
+                {
+                    var childNodes = node.SelectNodes("./*|./text()");
+
+                    if (childNodes != null)
+                    {
+                        foreach (var child in childNodes)
+                        {
+                            nodes.Enqueue(child);
+                            parentNode.InsertBefore(child, node);
+                        }
+                    }
+
+                    parentNode.RemoveChild(node);
+
+                }
+            }
+
+            return document.DocumentNode.InnerHtml;
         }
     }
 }

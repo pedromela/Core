@@ -18,6 +18,9 @@ using SignalsEngine.Indicators;
 using BrokerLib.Market;
 using BacktesterLib.Lib;
 using Microsoft.EntityFrameworkCore;
+using SignalsEngine;
+using OpenQA.Selenium;
+using NLog.Targets;
 
 namespace BacktesterEngine
 {
@@ -26,20 +29,14 @@ namespace BacktesterEngine
         private readonly BacktesterDBContext _backtesterContext = null;
         protected readonly TelegramDBContext _telegramContext;
 
-        private DateTime _fromDate;
-        private DateTime _toDate;
-
-        public BacktesterEngine(DateTime fromDate, DateTime toDate)
+        public BacktesterEngine()
         : base()
         {
             _backtesterContext = BacktesterDBContext.newDBContext();
             _telegramContext = TelegramDBContext.newDBContext();
-            _fromDate = fromDate;
-            _toDate = toDate;
             BotLib.BotLib.Backtest = true;
             BotDBContext.InitProviders();
             BrokerDBContext.InitProviders();
-            //Run();
         }
 
         public override void Run()
@@ -58,49 +55,6 @@ namespace BacktesterEngine
             catch (Exception e)
             {
                 BacktesterEngine.DebugMessage(e);
-            }
-        }
-
-        protected virtual Dictionary<BrokerDescription, List<MarketInfo>> GetActiveBrokerMarketsDictForTelegramBots()
-        {
-            try
-            {
-                Dictionary<BrokerDescription, List<MarketInfo>> activeBrokerMarketsDict = new Dictionary<BrokerDescription, List<MarketInfo>>();
-                //foreach (Brokers brokerType in Enum.GetValues(typeof(Brokers)))
-                //{
-                //    if (activeBrokerMarketsDict.ContainsKey(brokerType))
-                //    {
-                //        continue;
-                //    }
-                //    Broker broker = Broker.DecideBroker(brokerType);
-                //    activeBrokerMarketsDict.Add(brokerType, broker.GetMarketInfos());
-                //}
-
-                OANDA broker = new OANDA();
-                activeBrokerMarketsDict.Add(new BrokerDescription(Brokers.OANDA, BrokerType.margin), broker.GetMarketInfos());
-                
-                return activeBrokerMarketsDict;
-            }
-            catch (Exception e)
-            {
-                DebugMessage(e);
-            }
-            return null;
-        }
-
-        public void BacktestAllTelegramBots()
-        {
-            try
-            {
-                List<TelegramParameters> telegramParameters = _telegramContext.GetBotsFromDB();
-                foreach (TelegramParameters bot in telegramParameters)
-                {
-                    BacktestTelegramBot(bot.id);
-                }
-            }
-            catch (Exception e)
-            {
-                DebugMessage(e);
             }
         }
 
@@ -144,8 +98,10 @@ namespace BacktesterEngine
                         }
                     }
                 }
-                List<BotParameters> botsParametersList = new List<BotParameters>();
-                botsParametersList.Add(botParameters);
+                List<BotParameters> botsParametersList = new List<BotParameters>
+                {
+                    botParameters
+                };
                 botsParametersList[0].BrokerDescription = new BrokerDescription(botsParametersList[0].BrokerId, botsParametersList[0].BrokerType);
                 
 
@@ -265,78 +221,117 @@ namespace BacktesterEngine
             }
         }
 
-        public void BacktestInvertedTelegramBot(string BotId) 
+        public void BacktestTelegramChannel(string channelUrl)
         {
-            try
+            TelegramChromeController controller = new TelegramChromeController(channelUrl);
+            controller.LoadPage();
+            controller.GoToTopOfPage();
+            var messages = controller.GetAllMessages();
+            Channel[] channels = new Channel[]
             {
-                TelegramParameters telegramParameters = _telegramContext.TelegramParameters.Find(BotId);
-
-                List<TelegramTransaction> telegramTransactionsHistoric = _telegramContext.TelegramTransactions.Where(m => m.Channel == Channel.DecideChannelName(telegramParameters.Channel)).ToList();
-                if (telegramTransactionsHistoric.Count > 0)
+                new CustomChannel(channelUrl)
+            };
+            List<TelegramTransaction> telegramTransactionsHistoric = new List<TelegramTransaction>();
+            foreach (var message in messages)
+            {
+                try
                 {
-                    telegramTransactionsHistoric = TelegramTransaction.InvertTelegramTransactions(telegramTransactionsHistoric);
-                    BacktestTelegramBot(BotId, telegramTransactionsHistoric);
+                    IWebElement dateElement = message.FindElement(By.XPath(".//a[@class='tgme_widget_message_date']/time[@class='time']"));
+                    DateTime date = DateTime.Parse(dateElement.GetAttribute("datetime"));
+                    IWebElement messageElement = message.FindElement(By.XPath(".//div[@class='tgme_widget_message_text js-message_text before_footer']"));
+                    foreach (var channel in channels)
+                    {
+                        TelegramTransaction result = channel.Parse(messageElement.Text);
+                        
+                        if (result != null && result.IsConsistent())
+                        {
+                            result.Timestamp = date;
+                            telegramTransactionsHistoric.Add(result);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    BacktesterEngine.DebugMessage(e);
                 }
             }
-            catch (Exception e)
+            controller.browser.Quit();
+
+            TelegramParameters telegramParameters = new TelegramParameters()
             {
-                BacktesterEngine.DebugMessage(e);
-            }
+                id = Guid.NewGuid().ToString(),
+                TimeFrame = TimeFrames.M1,
+                Channel = channelUrl,
+                BrokerDescription = new BrokerDescription(Brokers.OANDA, BrokerType.margin),
+                TakeProfit = true,
+                StopLoss = true,
+                TrailingStop = false,
+                LockProfits = false,
+            };
+            telegramParameters.Store();
+            TelegramBot bot = TelegramBot.GenerateTelegramBotFromParameters(telegramParameters, true);
+            telegramTransactionsHistoric.ForEach(t => t.id = Guid.NewGuid().ToString());
+            BacktestTelegramBot(bot, telegramTransactionsHistoric);
         }
-        public void BacktestTelegramBot(string BotId, List<TelegramTransaction> telegramTransactionsHistoric = null)
+
+        public void BacktestTelegramBot(TelegramBot bot, List<TelegramTransaction> telegramTransactionsHistoric = null, bool invertedTransactions = false)
         {
             try
             {
-                TelegramParameters telegramParameters = _telegramContext.TelegramParameters.Find(BotId);
-
                 if (telegramTransactionsHistoric == null)
                 {
-                   telegramTransactionsHistoric = _telegramContext.TelegramTransactions.Where(m => m.Channel == Channel.DecideChannelName(telegramParameters.Channel)).ToList();
+                   telegramTransactionsHistoric = _telegramContext.TelegramTransactions.Where(m => m.Channel == Channel.DecideChannelName(bot._botParameters.Channel)).ToList();
                 }
 
-                CleanBotBacktestingData(BotId);
+                CleanBotBacktestingData(bot._botParameters.id);
                 
                 _signalsEngineDict.Clear();
 
+                if (invertedTransactions)
+                {
+                    telegramTransactionsHistoric = TelegramTransaction.InvertTelegramTransactions(telegramTransactionsHistoric);
+                }
+
                 
                 if (telegramTransactionsHistoric.Count > 0)
                 {
-                    DateTime fromDate = _telegramContext.TelegramTransactions.Select(m => m.Timestamp).Min();
-                    DateTime toDate = _telegramContext.TelegramTransactions.Select(m => m.Timestamp).Max();
-
-                    TelegramBot bot = new TelegramBot(telegramParameters);
-                    //bot._backtest = true;
-
-                    fromDate = DateTimeExtensions.Normalize(fromDate, (int)bot._botParameters.TimeFrame);
-                    toDate = DateTimeExtensions.Normalize(toDate, (int)bot._botParameters.TimeFrame);
-
-                    Dictionary<BrokerDescription, List<MarketInfo>> activeBrokerMarketsDict = GetActiveBrokerMarketsDictForTelegramBots();
-
-                    foreach (var pair in activeBrokerMarketsDict)
+                    OANDA broker = new OANDA();
+                    Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = new Dictionary<Broker, List<MarketInfo>>
                     {
-                        Broker broker = Broker.DecideBroker(pair.Key);
-                        IndicatorsEngine signalsEngine = null;
-                        foreach (MarketInfo marketInfo in pair.Value)
-                        {
-                            signalsEngine = new IndicatorsEngine(pair.Key.BrokerId, marketInfo, fromDate, toDate, bot._botParameters.TimeFrame);
-                            _signalsEngineDict.Add(IndicatorsEngine.DecideSignalsEngineId(pair.Key.BrokerId, marketInfo.GetMarket()), signalsEngine);
-                        }
-                    }
+                        { broker, new List<MarketInfo>() }
+                    };
+                    IndicatorsSharedData.InitInstance(activeBrokerMarketsDict, true);
 
-                    foreach (TelegramTransaction telegramTransaction in telegramTransactionsHistoric)
+                    //group transactions by market
+
+                    var transactionGroupedByMarket = telegramTransactionsHistoric.SkipWhile(t => !t.IsConsistent()).GroupBy(t => t.Market);
+                    foreach (var group in transactionGroupedByMarket)
                     {
-                        if (!telegramTransaction.IsConsistent())
+                        //create signals engine if not created before
+                        if (!_signalsEngineDict.ContainsKey(IndicatorsEngine.DecideSignalsEngineId(broker.GetBrokerId(), group.First().Market)))
                         {
-                            DebugMessage(String.Format("BacktestTelegramBot({0}) : telegramTransaction {1} not consistent...", bot._botParameters.id, telegramTransaction.id));
-                            continue;
+                            DateTime fromDate = group.Select(m => m.Timestamp).Min();
+                            DateTime toDate = group.Select(m => m.Timestamp).Max();
+
+                            fromDate = DateTimeExtensions.Normalize(fromDate, (int)bot._botParameters.TimeFrame);
+                            toDate = DateTimeExtensions.Normalize(toDate, (int)bot._botParameters.TimeFrame);
+
+                            MarketInfo marketInfo = new MarketInfo(group.First().Market, broker);
+                            if (!activeBrokerMarketsDict[broker].Any(marketInfo => marketInfo.GetMarket() == group.First().Market))
+                            {
+                                activeBrokerMarketsDict[broker].Add(marketInfo);
+                            }
+                            IndicatorsEngine signalsEngine = new IndicatorsEngine(broker.GetBrokerId(), marketInfo, fromDate, toDate, bot._botParameters.TimeFrame);
+                            IndicatorsSharedData.Instance.AddMarkets(activeBrokerMarketsDict);
+                            _signalsEngineDict.Add(IndicatorsEngine.DecideSignalsEngineId(broker.GetBrokerId(), marketInfo.GetMarket()), signalsEngine);
                         }
                         //find signals engine for this market
-                        IndicatorsEngine indicatorsEngine = _signalsEngineDict[IndicatorsEngine.DecideSignalsEngineId(Brokers.OANDA, telegramTransaction.Market)];
+                        IndicatorsEngine indicatorsEngine = _signalsEngineDict[IndicatorsEngine.DecideSignalsEngineId(Brokers.OANDA, group.First().Market)];
                         //process indicators at the moment of the transaction
-                        indicatorsEngine.ProcessIndicatorsAtDate(bot._botParameters.TimeFrame, telegramTransaction.Timestamp);
-                        //Process transaction
+                        indicatorsEngine.ProcessIndicatorsAtDate(bot._botParameters.TimeFrame, group.First().Timestamp);
                         bot.UpdateSignals(indicatorsEngine);
-                        List<Transaction> botTransactions = bot.GetTransactionsFromTelegramTransaction(telegramTransaction);
+                        //Process transaction
+                        List<Transaction> botTransactions = bot.GetTransactionsFromTelegramTransactions(group.ToList());
                         List<BacktesterTransaction> backtesterBotTransactions = new List<BacktesterTransaction>();
                         foreach (Transaction t in botTransactions)
                         {
@@ -347,9 +342,8 @@ namespace BacktesterEngine
 
                         while (!indicatorsEngine.CandlesEnd(bot._botParameters.TimeFrame) && !bot.TelegramTransactionsProcessed(backtesterBotTransactions))
                         {
-
                             //signalsEngine.indicatorsEngine.UpdateCycle();
-                            indicatorsEngine.UpdateIndicators(bot._botParameters.TimeFrame);
+                            indicatorsEngine.UpdateCandleData(bot._botParameters.TimeFrame);
                             bot.UpdateSignals(indicatorsEngine);
                             //bot.ProcessTransactions();
                             foreach (BacktesterTransaction t in backtesterBotTransactions)
@@ -358,7 +352,7 @@ namespace BacktesterEngine
                             }
                         }
                     }
-
+                    bot._score.Store();
                 }
 
 

@@ -523,6 +523,8 @@ namespace BrokerLib.Brokers
                 }
                 string timeFrameStr = timeFrame == TimeFrames.D1 ? timeFrame.ToString().Substring(0, 1) : timeFrame.ToString();
                 string date = fromDate.ToString("o", DateTimeFormatInfo.InvariantInfo);
+                string timezone = fromDate.ToString("zzzz");
+                date = date.Replace(timezone, "+00:00");
                 //string date = String.Format("{0} {1}:00.0Z", fromDate.ToShortDateString().Replace("/", "-"), fromDate.ToShortTimeString());
                 string url = String.Format(_url + "instruments/" + market + "/candles/?count={0}&granularity={1}&from={2}", count, timeFrameStr, date);
                 string response = Request.Get(url, _defaultAccessPoint.BearerToken, AuthTypes.BearerToken);

@@ -397,8 +397,10 @@ namespace BotEngine
                     }
                     else
                     {
-                        var list = new List<string>();
-                        list.Add(botParameters.Market);
+                        var list = new List<string>
+                        {
+                            botParameters.Market
+                        };
                         activeBrokerMarketStringsDict.Add(botParameters.BrokerDescription, list);
                     }
                 }

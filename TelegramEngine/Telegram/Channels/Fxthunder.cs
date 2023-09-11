@@ -7,12 +7,12 @@ using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram.Channels
 {
-    class Fxthunder : Channel
+    public class Fxthunder : Channel
     {
         public const string URL = "https://t.me/s/fxthunderfree";
 
         public Fxthunder()
-        : base("fxthunderfree", URL)
+        : base("fxthunderfree_DELETED", URL)
         {
 
         }

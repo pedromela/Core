@@ -94,7 +94,7 @@ namespace BotEngine.Bot
         {
             _botParameters = botParameters;
             _signalsEngineId = IndicatorsEngine.DecideSignalsEngineId(botParameters.BrokerId, botParameters.Market == null ? "" : botParameters.Market);
-            BrokerDescription brokerDescription = new BrokerDescription(_botParameters.BrokerId, _botParameters.BrokerType);
+            BrokerDescription brokerDescription = botParameters.BrokerDescription ?? new BrokerDescription(_botParameters.BrokerId, _botParameters.BrokerType);
             _broker = Broker.DecideBroker(brokerDescription);
             _transactionsDict = new Dictionary<TransactionType, Dictionary<string, Transaction>>(); 
             _tradesDict = new Dictionary<TransactionType, Dictionary<string, Trade>>();
@@ -131,6 +131,11 @@ namespace BotEngine.Bot
                     }
                 }
 
+                InitScore();
+                _backtestData = new BacktestData();
+            } 
+            else if (backtest && botParameters is TelegramParameters)
+            {
                 InitScore();
                 _backtestData = new BacktestData();
             }
@@ -288,20 +293,6 @@ namespace BotEngine.Bot
             }
             return 0;
         }
-
-        public float ProfitPercentage(Transaction transaction)
-        {
-            try
-            {
-                return Profit(transaction) / transaction.AmountSymbol2;
-            }
-            catch (Exception e)
-            {
-                BotEngine.DebugMessage(e);
-            }
-            return 0;
-        }
-
 
         public IEnumerable<Transaction> InitTransactionsToBeProcessed(IEnumerable<Transaction> transactions)
         {

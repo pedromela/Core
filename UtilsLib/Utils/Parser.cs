@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Globalization;
 
 namespace UtilsLib.Utils
 {
@@ -23,64 +24,14 @@ namespace UtilsLib.Utils
             return null;
         }
 
-        public static string ParseFloatString(string floatStr) 
-        {
-            string[] toks;
-            if (floatStr.Contains("."))
-            {
-                toks = floatStr.Split(".");
-                if (toks[1].Length > 8)
-                {
-                    toks[1] = toks[1].Substring(8);
-                    floatStr = toks[0] + "." + toks[1];
-                }
-            }
-            else if (floatStr.Contains(","))
-            {
-                toks = floatStr.Split(",");
-                if (toks[1].Length > 8)
-                {
-                    toks[1] = toks[1].Substring(8);
-                    floatStr = toks[0] + "." + toks[1];
-                }
-            }
-
-
-            return floatStr;
-        }
         public static float ParseFloat(string floatStr) 
         {
-            try
+            if (floatStr.Contains(","))
             {
-                //floatStr = ParseFloatString(floatStr);
-
-                float f = 0.0f;
-                try
-                {
-                    f = float.Parse(floatStr);
-                }
-                catch (Exception)
-                {
-                    if (floatStr.Contains("."))
-                    {
-                        floatStr = floatStr.Replace(".", ",");
-                    }
-                    else if (floatStr.Contains(","))
-                    {
-                        floatStr = floatStr.Replace(",", ".");
-                    }
-
-                    f = float.Parse(floatStr);
-                }
-
-                return f;
+                floatStr = floatStr.Replace(",", ".");
             }
-            catch (Exception)
-            {
-                UtilsLib.DebugMessage("Parser.ParseFloat(string) : Second parse atempt failed.");
-                //UtilsLib.DebugMessage(e);
-            }
-            return 0;
+
+            return float.Parse(floatStr, CultureInfo.InvariantCulture);
         }
     }
 }

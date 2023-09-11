@@ -4,6 +4,7 @@ using BrokerLib.Market;
 using BrokerLib.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static BrokerLib.BrokerLib;
 
 namespace SignalsEngine.Indicators
@@ -23,8 +24,12 @@ namespace SignalsEngine.Indicators
             Market2TimeFrame2Indicators = new Dictionary<MarketDescription, Dictionary<TimeFrames, Dictionary<string, Indicator>>>();
         }
 
-        public void Init(Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict)
+        public void AddMarkets(Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict)
         {
+            if (activeBrokerMarketsDict == null)
+            {
+                return;
+            }
             foreach (var pair in activeBrokerMarketsDict)
             {
                 foreach (MarketInfo marketInfo in pair.Value)
@@ -68,14 +73,14 @@ namespace SignalsEngine.Indicators
             }
         }
 
-        public static void InitInstance(Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict, bool backtest = false) 
+        public static void InitInstance(Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = null, bool backtest = false) 
         {
             try
             {
                 if (_instance == null || backtest)
                 {
                     _instance = new IndicatorsSharedData(backtest);
-                    _instance.Init(activeBrokerMarketsDict);
+                    _instance.AddMarkets(activeBrokerMarketsDict);
                 }
                 else
                 {
@@ -284,7 +289,7 @@ namespace SignalsEngine.Indicators
             {
                 SignalsEngine.DebugMessage(e);
             }
-            return null;
+            return Enumerable.Empty<Candle>().ToList();
         }
 
 

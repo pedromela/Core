@@ -709,7 +709,7 @@ namespace SignalsEngine.Indicators
                 List<Candle> candles = _broker.GetLastCandles(_marketInfo.GetMarket(), timeFrame, count);
                 if (candles == null)
                 {
-                    return null;
+                    return Enumerable.Empty<Candle>().ToList();
                 }
                 return candles;
             }
@@ -717,7 +717,7 @@ namespace SignalsEngine.Indicators
             {
                 SignalsEngine.DebugMessage(e);
             }
-            return null;
+            return Enumerable.Empty<Candle>().ToList();
         }
 
         public LinkedListNode<Dictionary<string, Candle>> GetNextCandleNode(/*int count*/)

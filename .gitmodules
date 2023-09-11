@@ -1,0 +1,3 @@
+[submodule "Utils.Selenium"]
+	path = Utils.Selenium
+	url = https://github.com/pedromela/Utils.Selenium.git

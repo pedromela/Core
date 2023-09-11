@@ -6,7 +6,7 @@ using Utils.Utils;
 
 namespace TelegramEngine.Telegram.Channels
 {
-    public class Channel
+    public abstract class Channel
     {
         public static readonly int MAX = 8;
         public string _name = null;
@@ -18,18 +18,7 @@ namespace TelegramEngine.Telegram.Channels
             _url = url;
         }
 
-        public virtual TelegramTransaction Parse(string rawData)
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                TelegramEngine.DebugMessage(e);
-            }
-            return null;
-        }
+        public abstract TelegramTransaction Parse(string rawData);
         public virtual int GetIndexOfAny(string str, string[] toks, ref int idx) 
         {
             try
@@ -274,6 +263,10 @@ namespace TelegramEngine.Telegram.Channels
                 else if (url.Equals(Youthtribe.URL))
                 {
                     return new Youthtribe();
+                }
+                else
+                {
+                    return new Forexsignalzz();
                 }
             }
             catch (Exception e)

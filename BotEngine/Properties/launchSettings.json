@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BotEngine": {
+      "commandName": "Project",
+      "hotReloadEnabled": false
+    }
+  }
+}

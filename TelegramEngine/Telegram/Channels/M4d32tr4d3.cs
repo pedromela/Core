@@ -1,23 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using TelegramLib.Models;
 using UtilsLib.Utils;
 using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram.Channels
 {
-    public class Forexsignalzz : Channel
+    public class M4d32tr4d3 : Channel
     {
-        public const string URL = "https://t.me/s/forexsignalzz";
+        public const string URL = "https://t.me/s/m4d32tr4d3free";
 
-        public Forexsignalzz() 
-        : base("forexsignalzz", URL)
+        public M4d32tr4d3()
+        : base("M4d32tr4d3", URL)
         {
 
         }
 
-        public override TelegramTransaction Parse(string rawData) 
+        public override TelegramTransaction Parse(string rawData)
         {
             rawData = rawData.ToUpper();
             TelegramEngine.DebugMessage("###################### PARSING MESSAGE BEGIN ######################");
@@ -72,9 +70,21 @@ namespace TelegramEngine.Telegram.Channels
 
                 rawData = rawData.Substring(index + "TAKE PROFIT AT ".Length);
 
-                index = rawData.IndexOf("STOP LOSS AT ");
+                index = rawData.IndexOf("TAKE PROFIT 2 AT ");
                 valueNow = rawData.Substring(0, index).Trim();
                 t.TakeProfit = Parser.ParseFloat(valueNow);
+
+                rawData = rawData.Substring(index + "TAKE PROFIT 2 AT ".Length);
+
+                index = rawData.IndexOf("TAKE PROFIT 3 AT ");
+                valueNow = rawData.Substring(0, index).Trim();
+                t.TakeProfit2 = Parser.ParseFloat(valueNow);
+
+                rawData = rawData.Substring(index + "TAKE PROFIT 3 AT ".Length);
+
+                index = rawData.IndexOf("STOP LOSS AT ");
+                valueNow = rawData.Substring(0, index).Trim();
+                t.TakeProfit3 = Parser.ParseFloat(valueNow);
 
                 rawData = rawData.Substring(index + "STOP LOSS AT ".Length);
 

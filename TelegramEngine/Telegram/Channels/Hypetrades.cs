@@ -7,12 +7,12 @@ using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram.Channels
 {
-    class Hypetrades : Channel
+    public class Hypetrades : Channel
     {
         public const string URL = "https://t.me/s/hypetradesfree";
 
         public Hypetrades()
-        : base("hypetradesfree", URL)
+        : base("hypetradesfree_deleted", URL)
         {
 
         }

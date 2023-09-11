@@ -1,7 +1,4 @@
-﻿using BrokerLib.Brokers;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
 using TelegramLib.Models;
 using UtilsLib.Utils;
 using static BrokerLib.BrokerLib;
@@ -13,7 +10,7 @@ namespace TelegramEngine.Telegram.Channels
         public const string URL = "https://t.me/s/itrendsfxfree";
 
         public ITrendsFxFree() 
-        :base("itrendsfxfree", URL)
+        :base("itrendsfxfree_deleted", URL)
         {
 
         }

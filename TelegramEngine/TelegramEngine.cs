@@ -8,10 +8,11 @@ using TelegramLib.Models;
 using UtilsLib.Utils;
 using BotEngine.Bot;
 using BotLib.Models;
-using TelegramEngine.Telegram.Channels;
 using BotEngine;
 using BrokerLib.Models;
 using static BrokerLib.BrokerLib;
+using SignalsEngine.Indicators;
+using System.Threading.Tasks;
 
 namespace TelegramEngine
 {
@@ -22,6 +23,17 @@ namespace TelegramEngine
         public CFDBot _forexBot = null;
         public TelegramBotFather _botFather = null;
         public bool first = true;
+        public const TimeFrames defaultTimeFrame = TimeFrames.M5;
+        public string[] channelUrls = new string[] 
+        {
+            "https://t.me/s/easyforexpips",
+            "https://t.me/s/Forexsignalsstreet",
+            "https://t.me/s/freesignalsfxnl",
+            "https://t.me/s/Free_Forex_Signals_ElevatingFX",
+            "https://t.me/s/free_forex_signals_fxlifestyle",
+            "https://t.me/s/TFXC_FREE",
+            "https://t.me/s/millionmoneyfx"
+        };
 
         public TelegramEngine(TelegramDBContext telegramContext)
         : base()
@@ -68,22 +80,8 @@ namespace TelegramEngine
             {
                 BotDBContext.InitProviders();
                 BrokerDBContext.InitProviders();
-
-                List<TelegramParameters> botsParametersList = _telegramContext.GetBotsFromDB();
-
-                if (botsParametersList.Count == Channel.MAX)
-                {
-                    LoadTelegramBots(botsParametersList);
-                }
-                else if (botsParametersList.Count < Channel.MAX && botsParametersList.Count > 0)
-                {
-                    LoadTelegramBots(botsParametersList);
-                    GenerateAndLoadTelegramBots(Channel.MAX - botsParametersList.Count);
-                }
-                else
-                {
-                    GenerateAndLoadTelegramBots(Channel.MAX);
-                }
+                IndicatorsSharedData.InitInstance();
+                LoadTelegramBots();
             }
             catch (Exception e)
             {
@@ -91,39 +89,17 @@ namespace TelegramEngine
             }
         }
 
-        private void LoadTelegramBots(List<TelegramParameters> botsParametersList) 
+        private void LoadTelegramBots(bool backtest = false) 
         {
             try
             {
-                foreach (TelegramParameters telegramParameters in botsParametersList)
+                foreach (var channelUrl in channelUrls)
                 {
-                    if (!_botDict.ContainsKey(telegramParameters.TimeFrame))
+                    if (!_botDict.ContainsKey(defaultTimeFrame))
                     {
-                        _botDict.Add(telegramParameters.TimeFrame, new Dictionary<string, BotBase>());
+                        _botDict.Add(defaultTimeFrame, new Dictionary<string, BotBase>());
                     }
-                    _botDict[telegramParameters.TimeFrame].Add(telegramParameters.id, TelegramBot.GenerateTelegramBotFromParameters(telegramParameters));
-                }
-            }
-            catch (Exception e)
-            {
-                TelegramEngine.DebugMessage(e);
-            }
-        }
-
-        private void GenerateAndLoadTelegramBots(int count) 
-        {
-            try
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    TelegramBot bot = TelegramBot.GenerateRandomTelegramBot(-1, i);
-                    bot.SaveBotParameters();
-                    if (!_botDict.ContainsKey(bot._botParameters.TimeFrame))
-                    {
-                        _botDict.Add(bot._botParameters.TimeFrame, new Dictionary<string, BotBase>());
-                    }
-
-                    _botDict[bot._botParameters.TimeFrame].Add(bot._botParameters.id, bot);
+                    _botDict[defaultTimeFrame].Add(channelUrl, TelegramBot.GenerateTelegramBotFromChannelUrl(channelUrl, defaultTimeFrame, backtest));
                 }
             }
             catch (Exception e)
@@ -136,9 +112,10 @@ namespace TelegramEngine
         {
             DebugMessage("############################################################");
             DebugMessage("Starting Telegram Bots...");
-            MyTaskScheduler.Instance.ScheduleTaskByInitOfMinute<TelegramEngine>(Update, "TelegramBotsUpdate", this, 1, 1, 0);
+            MyTaskScheduler.Instance.ScheduleTaskByInitOfMinute<TelegramEngine>(Update, "TelegramBotsUpdate", this, (int) defaultTimeFrame, 1, 0);
             DebugMessage("############################################################");
         }
+
         private static void Update(TelegramEngine telegramEngine) 
         {
             try
@@ -158,12 +135,14 @@ namespace TelegramEngine
                         {
                             if (bot is TelegramBot)
                             {
-                                TelegramBot telegramBot = (TelegramBot)bot;
-                                TelegramTransaction t = telegramBot.ProcessNewTelegramTransaction();
-                                if (t != null)
-                                {
-                                    transactions.Add(t);
-                                }
+                                //Task.Run(() => {
+                                    TelegramBot telegramBot = (TelegramBot)bot;
+                                    TelegramTransaction t = telegramBot.ProcessNewTelegramTransaction();
+                                    if (t != null && t.IsConsistent())
+                                    {
+                                        transactions.Add(t);
+                                    }
+                                //});
                             }
                         }
                     }
@@ -184,6 +163,10 @@ namespace TelegramEngine
                     foreach (var t in transactions)
                     {
                         string order = t.ParseBeautify();
+                        if (order == null)
+                        {
+                            continue;
+                        }
                         DebugMessage(order);
                         telegramEngine._botFather.SendMessage(order);
                     }
