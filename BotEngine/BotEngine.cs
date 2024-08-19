@@ -480,6 +480,56 @@ namespace BotEngine
             }
         }
 
+        private void InitBot(BotParameters botParameters) 
+        {
+            List<BotParameters> botsParametersList = new List<BotParameters>() 
+            {
+                botParameters
+            };
+            Dictionary<BrokerDescription, List<string>> activeBrokerMarketStringsDict = GetActiveBrokerMarketStringsDict(botsParametersList);
+
+            List<ActiveMarket> markets = new List<ActiveMarket>();
+            int id = 0;
+            foreach (var pair in activeBrokerMarketStringsDict)
+            {
+                Broker.AddBroker(pair.Key, activeBrokerMarketStringsDict);
+                foreach (string market in pair.Value)
+                {
+                    ActiveMarket activeMarket = new ActiveMarket(market, pair.Key);
+                    activeMarket.id = id++;
+                    if (markets.Contains(activeMarket))
+                    {
+                        continue;
+                    }
+
+                    markets.Add(activeMarket);
+                    activeMarket.Store();
+                }
+            }
+
+            Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = GetActiveBrokerMarketsDict(botsParametersList);
+            IndicatorsSharedData.Instance.AddMarkets(activeBrokerMarketsDict);
+            //MarketDataClient client
+
+            foreach (var pair in activeBrokerMarketsDict)
+            {
+                Broker broker = pair.Key;
+                IndicatorsEngine signalsEngine = null;
+                foreach (MarketInfo marketInfo in pair.Value)
+                {
+                    string signalsEngineId = IndicatorsEngine.DecideSignalsEngineId(broker.GetBrokerId(), marketInfo.GetMarket());
+                    if (_signalsEngineDict.ContainsKey(signalsEngineId))
+                    {
+                        continue;
+                    }
+                    signalsEngine = new IndicatorsEngine(broker.GetBrokerId(), marketInfo);
+                    _signalsEngineDict.Add(signalsEngineId, signalsEngine);
+                }
+            }
+
+            WaitForFirstCandles(_signalsEngineDict.Values.ToList());
+        }
+
         private static void UpdateUserBots(BotEngine botEngine) 
         {
             try
@@ -498,8 +548,19 @@ namespace BotEngine
                         botParameters.Update();
 
                         Broker broker = Broker.DecideBroker(botparameters.BrokerDescription);
+                        if (broker == null)
+                        {
+                            botEngine.InitBot(botparameters);
+                            broker = Broker.DecideBroker(botparameters.BrokerDescription);
+                        }
+
                         MarketDescription marketDescription = new MarketDescription(botparameters.Market, broker.GetMarketType(), broker.GetBrokerType());
                         MarketInfo marketInfo = IndicatorsSharedData.Instance.GetMarketInfo(marketDescription, botparameters.TimeFrame);
+
+                        if (marketInfo == null)
+                        {
+                            marketInfo = IndicatorsSharedData.Instance.GetMarketInfo(marketDescription, botparameters.TimeFrame);
+                        }
 
                         if (!botParameters.ValidStart(marketInfo) || !botparameters.ValidStart(marketInfo))
                         {

@@ -10,13 +10,21 @@ namespace BrokerLib.Market
 
     public class MarketDescription
     {
-        public string Market { get; set; }
+        public string Market1 { get; private set; }
+        public string Market2 { get; private set; }
+        public string Market { get { return Market1 + Market2; } }
         public MarketTypes MarketType { get; set; }
         public BrokerType BrokerType { get; set; }
 
         public MarketDescription(string Market, MarketTypes MarketType, BrokerType BrokerType)
         {
-            this.Market = Market;
+            var markets = Market.Split("_");
+            if (markets.Length != 2)
+            {
+                BrokerLib.DebugMessage($"Market {Market} did not contain _ or 2 two markets.");
+            }
+            this.Market1 = markets[0];
+            this.Market2 = markets[1];
             this.MarketType = MarketType;
             this.BrokerType = BrokerType;
         }
@@ -88,6 +96,11 @@ namespace BrokerLib.Market
         public string GetMarket() 
         {
             return _marketDescription.Market;
+        }
+
+        public string GetMarketUnderscore()
+        {
+            return _marketDescription.Market1 + "_" + _marketDescription.Market2;
         }
 
         public MarketTypes GetMarketType()

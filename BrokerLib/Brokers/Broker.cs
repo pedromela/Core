@@ -82,6 +82,7 @@ namespace BrokerLib.Brokers
         protected BrokerDescription _brokerDescription;
         protected MarketTypes _marketType = MarketTypes.Crypto;
         protected List<MarketInfo> _markets = new List<MarketInfo>();// switch to dictionary
+        protected List<MarketInfo> _availableMarkets = new List<MarketInfo>();// switch to dictionary
         protected List<string> _activeMarketStrings = new List<string>();
         protected int _hourDifference = 0;
         public Broker(string url, AuthTypes authType, BrokerLib.Brokers brokerId, BrokerType brokerType, MarketTypes marketType, AccessPoint defaultAccessPoint = null)
@@ -93,6 +94,7 @@ namespace BrokerLib.Brokers
             _brokerDescription = new BrokerDescription(brokerId, brokerType);
             _marketType = marketType;
             _defaultAccessPoint = defaultAccessPoint;
+            InitMarketsFirstTime(true);
             //_hourDifference = DateTime.Now - ;
         }
 
@@ -514,6 +516,24 @@ namespace BrokerLib.Brokers
             return null;
         }
 
+        public virtual List<MarketInfo> GetAvailableMarketInfos(bool ignoreDiscovery = false)
+        {
+            try
+            {
+                if (_markets.Count == 0)
+                {
+                    BrokerLib.DebugMessage("Broker::GetMarketInfos() : available markets list is empty!");
+                    //InitMarkets(ignoreDiscovery);
+                }
+                return _availableMarkets;
+            }
+            catch (Exception e)
+            {
+                BrokerLib.DebugMessage(e);
+            }
+            return null;
+        }
+
         public virtual MarketInfo GetMarketInfo(string market)
         {
             try
@@ -592,10 +612,29 @@ namespace BrokerLib.Brokers
                 _brokersDict = new Dictionary<BrokerDescription, Broker>();
                 foreach (var pair in brokerMarketsStringDict)
                 {
-                    Broker broker = SwitchBroker(pair.Key, brokerMarketsStringDict);
-                    _brokersDict.Add(pair.Key, broker);
+                    AddBroker(pair.Key, brokerMarketsStringDict);
                 }
                 _initialized = true;
+            }
+            catch (Exception e)
+            {
+                BrokerLib.DebugMessage(e);
+            }
+        }
+
+        public static void AddBroker(BrokerDescription brokerDescription, Dictionary<BrokerDescription, List<string>> brokerMarketsStringDict)
+        {
+            try
+            {
+                Broker broker = SwitchBroker(brokerDescription, brokerMarketsStringDict);
+                if (_brokersDict.ContainsKey(brokerDescription))
+                {
+                    _brokersDict[brokerDescription] = broker;
+                }
+                else
+                {
+                    _brokersDict.Add(brokerDescription, broker);
+                }
             }
             catch (Exception e)
             {
@@ -736,8 +775,14 @@ namespace BrokerLib.Brokers
         {
             try
             {
-                string currency = market.Substring(3);
+                var markets = market.Split("_");
+                if (markets.Length != 2)
+                {
+                    BrokerLib.DebugMessage($"Market {market} did not contain _ or 2 two markets.");
+                }
+                string currency = markets[1];
                 string Market = null;
+                market = market.Replace("_", "");
                 if (currency == "USD")
                 {
                     Market = market;

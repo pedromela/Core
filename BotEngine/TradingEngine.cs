@@ -127,33 +127,14 @@ namespace BotEngine
                         return 0;
                     }, true);
 
+
                     o.OnNext(40);
-
-                    List<ActiveMarket> markets = new List<ActiveMarket>();
-                    int id = 0;
-                    foreach (var pair in activeBrokerMarketStringsDict)
-                    {
-                        foreach (string market in pair.Value)
-                        {
-                            ActiveMarket activeMarket = new ActiveMarket(market, pair.Key);
-                            activeMarket.id = id++;
-                            if (markets.Contains(activeMarket))
-                            {
-                                continue;
-                            }
-
-                            markets.Add(activeMarket);
-                            activeMarket.Store();
-                        }
-                    }
-
-                    o.OnNext(50);
 
                     Dictionary<Broker, List<MarketInfo>> activeBrokerMarketsDict = GetActiveBrokerMarketsDict(botsParametersList);
                     IndicatorsSharedData.InitInstance(activeBrokerMarketsDict);
                     //MarketDataClient client
 
-                    o.OnNext(60);
+                    o.OnNext(50);
 
                     foreach (var pair in activeBrokerMarketsDict)
                     {
@@ -171,9 +152,29 @@ namespace BotEngine
                         }
                     }
 
-                    o.OnNext(70);
+                    o.OnNext(60);
 
-                    WaitForFirstCandles();
+                    List<ActiveMarket> markets = new List<ActiveMarket>();
+                    int id = 0;
+                    foreach (var pair in activeBrokerMarketsDict)
+                    {
+                        foreach (var market in pair.Key.GetAvailableMarketInfos())
+                        {
+                            ActiveMarket activeMarket = new ActiveMarket(market.GetMarketUnderscore(), pair.Key.GetBrokerDescription());
+                            activeMarket.id = id++;
+                            if (markets.Contains(activeMarket))
+                            {
+                                continue;
+                            }
+
+                            markets.Add(activeMarket);
+                            activeMarket.Store();
+                        }
+                    }
+
+                    o.OnNext(80);
+
+                    WaitForFirstCandles(_signalsEngineDict.Values.ToList());
 
                     o.OnNext(80);
 
@@ -307,13 +308,13 @@ namespace BotEngine
             }
         }
 
-        protected virtual void WaitForFirstCandles()
+        protected virtual void WaitForFirstCandles(List<IndicatorsEngine> signalEngines)
         {
             try
             {
-                Task[] loadingTasks = new Task[_signalsEngineDict.Values.Count];
+                Task[] loadingTasks = new Task[signalEngines.Count];
                 int i = 0;
-                foreach (var signalsEngine in _signalsEngineDict.Values)
+                foreach (var signalsEngine in signalEngines)
                 {
                     loadingTasks[i++] = Task.Run(() =>
                     {

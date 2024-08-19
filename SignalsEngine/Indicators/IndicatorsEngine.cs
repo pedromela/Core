@@ -23,9 +23,6 @@ namespace SignalsEngine.Indicators
 
         public readonly object Lock = new object();
 
-        public bool FirstCandle = true;
-
-
         public IndicatorsEngine(Brokers broker, MarketInfo marketInfo)
         {
             _brokerId = broker;
@@ -257,7 +254,7 @@ namespace SignalsEngine.Indicators
                     int i = 0;
                     HashSet<string> processedIndicatorsEngines = new HashSet<string>();
 
-                    foreach (TimeFrames timeFrame in Enum.GetValues(typeof(TimeFrames)))
+                    foreach (TimeFrames timeFrame in timeFrames)
                     {
                         loadingTaks[i++] = Task.Run(() =>
                         {

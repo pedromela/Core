@@ -127,7 +127,7 @@ namespace UtilsLib.Utils
         {
             if (!connectionStringMap.ContainsKey(connectionName))
             {
-                var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
                 IConfigurationRoot Configuration = builder.Build();
                 connectionStringMap.Add(connectionName, Configuration.GetConnectionString(connectionName));
             }

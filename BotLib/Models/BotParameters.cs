@@ -26,6 +26,7 @@ namespace BotLib.Models
             this.rank = rank;
         }
     }
+
     public class BotParameters : DBModelBase
     {
         [Key]
@@ -128,7 +129,7 @@ namespace BotLib.Models
                     !string.IsNullOrEmpty(StrategyId) &&
                     TimeFrame > 0 &&
                     marketInfo != null &&
-                    marketInfo.GetMarket() == Market;
+                    marketInfo.GetMarketUnderscore() == Market;
             }
             catch (Exception e)
             {

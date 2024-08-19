@@ -250,11 +250,11 @@ namespace TelegramLib.Models
                     return null;
                 }
                 string type = "";
-                if (Type.Equals(TransactionType.buy.ToString()))
+                if (Type == TransactionType.buy)
                 {
                     type = "Buy";
                 }
-                else if (Type.Equals(TransactionType.sell.ToString()))
+                else if (Type == TransactionType.sell)
                 {
                     type = "Sell";
                 }

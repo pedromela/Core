@@ -567,8 +567,8 @@ namespace BrokerLib.Brokers
         {
             try
             {
-                _markets.Clear();
-                _markets.Add(new MarketInfo("EURUSD", this, ignoreDiscovery));
+                _availableMarkets.Clear();
+                _availableMarkets.Add(new MarketInfo("EUR_USD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("EURNZD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("EURAUD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("NZDUSD", this, ignoreDiscovery));
@@ -578,16 +578,17 @@ namespace BrokerLib.Brokers
                 //_markets.Add(new MarketInfo("AUDCHF", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("EURJPY", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("AUDJPY", this, ignoreDiscovery));
-                _markets.Add(new MarketInfo("USDCHF", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("USD_CHF", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("USDJPY", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("EURCAD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("CHFJPY", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("CADJPY", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("GBPAUD", this, ignoreDiscovery));
-                _markets.Add(new MarketInfo("GBPUSD", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("GBP_USD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("GBPNZD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("GBPJPY", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("XAUUSD", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("SPX500_USD", this, ignoreDiscovery));
             }
             catch (Exception e)
             {

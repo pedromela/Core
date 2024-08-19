@@ -46,7 +46,7 @@ namespace BacktesterEngine
                 AutoResetEvent autoEvent = new AutoResetEvent(false);
 
                 Init();
-                WaitForFirstCandles();
+                WaitForFirstCandles(_signalsEngineDict.Values.ToList());
                 Started = true;
                 UpdateCycle();
 
@@ -126,7 +126,7 @@ namespace BacktesterEngine
                     }
                 }
 
-                WaitForFirstCandles();
+                WaitForFirstCandles(_signalsEngineDict.Values.ToList());
 
                 if (botsParametersList.Count > 0)
                 {

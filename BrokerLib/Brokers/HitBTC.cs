@@ -538,23 +538,23 @@ namespace BrokerLib.Brokers
         {
             try
             {
-                _markets.Clear();
-                _markets.Add(new MarketInfo("BTCUSD", this, ignoreDiscovery));
-                _markets.Add(new MarketInfo("ETHUSD", this, ignoreDiscovery));
+                _availableMarkets.Clear();
+                _availableMarkets.Add(new MarketInfo("BTC_USD", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("ETH_USD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("XRPUSD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("TRXUSD", this, ignoreDiscovery));
-                _markets.Add(new MarketInfo("ADAUSD", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("ADA_USD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("BCHUSD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("BSVUSD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("EOSUSD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("XLMUSD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("DOGEUSD", this, ignoreDiscovery));
-                _markets.Add(new MarketInfo("ZECUSD", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("ZEC_USD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("NEOUSD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("LTCUSD", this, ignoreDiscovery));
                 //_markets.Add(new MarketInfo("DOTUSD", this, ignoreDiscovery));
-                _markets.Add(new MarketInfo("LTCUSD", this, ignoreDiscovery));
-                _markets.Add(new MarketInfo("ETHBTC", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("LTC_USD", this, ignoreDiscovery));
+                _availableMarkets.Add(new MarketInfo("ETH_BTC", this, ignoreDiscovery));
             }
             catch (Exception e)
             {

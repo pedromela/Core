@@ -90,7 +90,6 @@ namespace BrokerLib.Lib
                     }
                 }
 
-
                 return false;
             }
             catch (Exception e)
