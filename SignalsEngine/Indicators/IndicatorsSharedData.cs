@@ -205,10 +205,10 @@ namespace SignalsEngine.Indicators
         {
             try
             {
-                if (name.Contains("i_VWAP"))
-                {
-                    timeFrame = TimeFrames.M1;
-                }
+                //if (name.Contains("i_VWAP"))
+                //{
+                //    timeFrame = TimeFrames.M1;
+                //}
                 if (!Market2TimeFrame2Indicators.ContainsKey(marketDesc))
                 {
                     SignalsEngine.DebugMessage(String.Format("IndicatorsSharedData::GetIndicator({0},{1},{2}) : Market not present in shared data.", marketDesc.Market, name, timeFrame.ToString()));
