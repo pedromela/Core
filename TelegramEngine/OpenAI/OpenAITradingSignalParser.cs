@@ -6,10 +6,11 @@ namespace TelegramEngine.OpenAI
 {
     public class OpenAITradingSignalParser
     {
+        private const string apiKey = "";
         private OpenAIClient _client;
         public OpenAITradingSignalParser()
         {
-            _client = new OpenAIClient("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");
+            _client = new OpenAIClient(apiKey);
         }
 
         public string Parse(string signal) 
