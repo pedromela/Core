@@ -981,8 +981,8 @@ namespace BotEngine.Bot
                 {
                     int idebug = 0;
                 }
-
-                Transaction closeTransaction = StoreSellOrderTransaction(t, _signalsEngine.GetCurrentCandle(TimeFrames.M1), description);
+                var timeframe = BotLib.BotLib.Backtest ? _botParameters.TimeFrame : TimeFrames.M1;
+                Transaction closeTransaction = StoreSellOrderTransaction(t, _signalsEngine.GetCurrentCandle(timeframe), description);
                 
                 return closeTransaction == null ? false : true;
             }

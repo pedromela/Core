@@ -59,6 +59,37 @@ namespace BrokerLib.Models
             VolumeQuote = _VolumeQuote;
         }
 
+        public override bool Equals(object obj)
+        {
+            var candle = obj as Candle;
+
+            if (candle == null)
+            {
+                return false;
+            }
+
+            if (TimeFrame.Equals(candle.TimeFrame) &&
+                Symbol.Equals(candle.Symbol) &&
+                Timestamp.Equals(candle.Timestamp))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked // Overflow is fine, just wrap
+            {
+                int hash = 17;
+                // Suitable nullity checks etc, of course :)
+                hash = hash * 23 + TimeFrame.GetHashCode();
+                hash = hash * 23 + Symbol.GetHashCode();
+                hash = hash * 23 + Timestamp.GetHashCode();
+                return hash;
+            }
+        }
+
         public bool IsEqual(Candle candle) 
         {
             try

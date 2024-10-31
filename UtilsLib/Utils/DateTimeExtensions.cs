@@ -10,7 +10,7 @@ namespace UtilsLib.Utils
             date = date.AddMilliseconds(-date.Millisecond);
             if (timeFrame != 1)
             {
-                date = date.AddMinutes(timeFrame - date.Minute % timeFrame);
+                date = date.AddMinutes((timeFrame - date.Minute) % timeFrame);
             }
             date = date.AddTicks(-(date.Ticks % 10000));
             return date;

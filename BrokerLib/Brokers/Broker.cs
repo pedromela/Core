@@ -369,13 +369,13 @@ namespace BrokerLib.Brokers
             {
                 DateTime _fromDate = DateTimeExtensions.Normalize(fromDate, (int) timeFrame);
                 DateTime _toDate = DateTimeExtensions.Normalize(toDate, (int) timeFrame);
-                List<Candle> candleList = new List<Candle>();
+                HashSet<Candle> candleSet = new HashSet<Candle>();
                 double period = (toDate - fromDate).TotalMinutes / (int)timeFrame;
 
                 if (period < 10)
                 {
                     BrokerLib.DebugMessage("GetCandles() : Requested time span is too short. Continue...");
-                    return candleList;
+                    return candleSet.ToList();
                 }
 
                 while (_fromDate < _toDate)
@@ -409,9 +409,9 @@ namespace BrokerLib.Brokers
                                 _fromDate = _toDate;
                                 break;
                             }
-                            if (candleList.Count > 0)
+                            if (candleSet.Count > 0)
                             {
-                                Candle lastCandle = candleList.Last();
+                                Candle lastCandle = candleSet.Last();
                                 DateTime now = DateTimeExtensions.Normalize(DateTime.Now, (int)timeFrame).AddMinutes(-(int)timeFrame);
                                 if (_toDate > now &&
                                     candle.Timestamp >= lastCandle.Timestamp &&
@@ -421,7 +421,7 @@ namespace BrokerLib.Brokers
                                     break;
                                 }
                             }
-                            candleList.Add(candle);
+                            candleSet.Add(candle);
 
                         }
 
@@ -431,19 +431,19 @@ namespace BrokerLib.Brokers
                         _fromDate = _toDate;
                     }
 
-                    if (candleList.Count > 0)
+                    if (candleSet.Count > 0)
                     {
-                        if (candleList[0].Timestamp < DateTimeExtensions.Normalize(fromDate, 1) ||
-                            candleList[candleList.Count - 1].Timestamp > DateTimeExtensions.Normalize(toDate, 1))
+                        if (candleSet.First().Timestamp < DateTimeExtensions.Normalize(fromDate, 1) ||
+                            candleSet.Last().Timestamp > DateTimeExtensions.Normalize(toDate, 1))
                         {
-                            candleList.Clear();
-                            return candleList;
+                            candleSet.Clear();
+                            return candleSet.ToList();
                         }
                     }
 
                 }
 
-                return candleList;
+                return candleSet.ToList();
             }
             catch (Exception e)
             {
