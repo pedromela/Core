@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SignalsEngine;
+using System;
 using System.Threading;
 
 namespace BacktesterEngine
@@ -14,8 +15,9 @@ namespace BacktesterEngine
 
             //backtesterEngine.Run();
             //backtesterEngine.BacktestAllBots();
-            //backtesterEngine.BacktestBot("e3da2c25-d87f-4ed6-a1bf-e889fb845842", fromDate, toDate, null);
-            backtesterEngine.BacktestTelegramChannel("https://t.me/s/m4d32tr4d3free");
+            //backtesterEngine.BacktestBot("channel bot", fromDate, toDate, null);
+            backtesterEngine.BacktestBot("RSI eurusd", fromDate, toDate, null);
+            //backtesterEngine.BacktestTelegramChannel("https://t.me/s/m4d32tr4d3free");
             //backtesterEngine.BacktestTelegramChannel("https://t.me/s/free_forex_signals_fxlifestyle");
             //backtesterEngine.BacktestInvertedTelegramBot(2009);
             //backtesterEngine.BacktestAllTelegramBots();

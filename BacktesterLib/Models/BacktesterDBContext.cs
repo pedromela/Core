@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using BrokerLib.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -75,9 +76,50 @@ namespace BacktesterLib.Models
             return optionsBuilder;
         }
 
+        public static T Execute<T>(Func<BacktesterDBContext, T> func, bool insertOrUpdate = false)
+        {
+            //using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
+            //{
+                BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext();
+                if (insertOrUpdate)
+                {
+                    func.Invoke(backtesterContext);
+                }
+                else
+                {
+                    try
+                    {
+                        var result = func.Invoke(backtesterContext);
+                        if (typeof(T) == typeof(Array))
+                        {
+                            var resultCast = result as Array;
+                            if (resultCast.Length > 0)
+                            {
+                                return result;
+                            }
+                        }
+                        else if (result != null)
+                        {
+                            return result;
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            //}
+            return default(T);
+        }
+
+        //public static BacktesterDBContext newDBContext()
+        //{
+        //    return new BacktesterDBContext((DbContextOptions<BacktesterDBContext>)GetOptionsbuilder().Options);
+        //}
+
+        private static BacktesterDBContext _context = new BacktesterDBContext((DbContextOptions<BacktesterDBContext>)GetOptionsbuilder().Options);
         public static BacktesterDBContext newDBContext()
         {
-            return new BacktesterDBContext((DbContextOptions<BacktesterDBContext>)GetOptionsbuilder().Options);
+            return _context;
         }
     }
 }

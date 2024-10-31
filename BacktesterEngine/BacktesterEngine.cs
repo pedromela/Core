@@ -166,16 +166,21 @@ namespace BacktesterEngine
             }
         }
 
-        public void BacktestBot(string BotId, DateTime fromDate, DateTime toDate, IObserver<BacktestData> observer)
+        public void BacktestBot(string botName, DateTime fromDate, DateTime toDate, IObserver<BacktestData> observer)
+        {
+            BotParameters botParameters;
+            botParameters = BotDBContext.Execute(botContext =>
+            {
+                return botContext.BotsParameters.First(bot => bot.BotName == botName);
+            });
+            BacktestBot(botParameters, fromDate, toDate, observer);
+        }
+
+        public void BacktestBot(BotParameters botParameters, DateTime fromDate, DateTime toDate, IObserver<BacktestData> observer)
         {
             try
             {
-                BotParameters botParameters;
-                botParameters = BotDBContext.Execute(botContext =>
-                {
-                    return botContext.BotsParameters.Find(BotId);
-                });
-                CleanBotBacktestingData(BotId);
+                CleanBotBacktestingData(botParameters.id);
                 var complete = new BacktestData();
                 var score = new BacktesterScore();
                 score.Positions = -2;
@@ -227,10 +232,7 @@ namespace BacktesterEngine
             controller.LoadPage();
             controller.GoToTopOfPage();
             var messages = controller.GetAllMessages();
-            Channel[] channels = new Channel[]
-            {
-                new CustomChannel(channelUrl)
-            };
+            Channel channel = new CustomChannel(channelUrl);
             List<TelegramTransaction> telegramTransactionsHistoric = new List<TelegramTransaction>();
             foreach (var message in messages)
             {
@@ -239,15 +241,12 @@ namespace BacktesterEngine
                     IWebElement dateElement = message.FindElement(By.XPath(".//a[@class='tgme_widget_message_date']/time[@class='time']"));
                     DateTime date = DateTime.Parse(dateElement.GetAttribute("datetime"));
                     IWebElement messageElement = message.FindElement(By.XPath(".//div[@class='tgme_widget_message_text js-message_text before_footer']"));
-                    foreach (var channel in channels)
-                    {
-                        TelegramTransaction result = channel.Parse(messageElement.Text);
+                    TelegramTransaction result = channel.Parse(messageElement.Text);
                         
-                        if (result != null && result.IsConsistent())
-                        {
-                            result.Timestamp = date;
-                            telegramTransactionsHistoric.Add(result);
-                        }
+                    if (result != null && result.IsConsistent())
+                    {
+                        result.Timestamp = date;
+                        telegramTransactionsHistoric.Add(result);
                     }
                 }
                 catch (Exception e)
@@ -270,7 +269,10 @@ namespace BacktesterEngine
             };
             telegramParameters.Store();
             TelegramBot bot = TelegramBot.GenerateTelegramBotFromParameters(telegramParameters, true);
-            telegramTransactionsHistoric.ForEach(t => t.id = Guid.NewGuid().ToString());
+            telegramTransactionsHistoric.ForEach(t => {
+                t.id = Guid.NewGuid().ToString();
+                t.Market = MarketInfo.ParseMarket(t.Market);
+            });
             BacktestTelegramBot(bot, telegramTransactionsHistoric);
         }
 
@@ -291,7 +293,6 @@ namespace BacktesterEngine
                 {
                     telegramTransactionsHistoric = TelegramTransaction.InvertTelegramTransactions(telegramTransactionsHistoric);
                 }
-
                 
                 if (telegramTransactionsHistoric.Count > 0)
                 {
@@ -308,7 +309,7 @@ namespace BacktesterEngine
                     foreach (var group in transactionGroupedByMarket)
                     {
                         //create signals engine if not created before
-                        if (!_signalsEngineDict.ContainsKey(IndicatorsEngine.DecideSignalsEngineId(broker.GetBrokerId(), group.First().Market)))
+                        if (!_signalsEngineDict.ContainsKey(IndicatorsEngine.DecideSignalsEngineId(broker.GetBrokerId(), group.Key)))
                         {
                             DateTime fromDate = group.Select(m => m.Timestamp).Min();
                             DateTime toDate = group.Select(m => m.Timestamp).Max();
@@ -316,8 +317,8 @@ namespace BacktesterEngine
                             fromDate = DateTimeExtensions.Normalize(fromDate, (int)bot._botParameters.TimeFrame);
                             toDate = DateTimeExtensions.Normalize(toDate, (int)bot._botParameters.TimeFrame);
 
-                            MarketInfo marketInfo = new MarketInfo(group.First().Market, broker);
-                            if (!activeBrokerMarketsDict[broker].Any(marketInfo => marketInfo.GetMarket() == group.First().Market))
+                            MarketInfo marketInfo = new MarketInfo(group.Key, broker);
+                            if (!activeBrokerMarketsDict[broker].Any(marketInfo => marketInfo.GetMarket() == group.Key))
                             {
                                 activeBrokerMarketsDict[broker].Add(marketInfo);
                             }
@@ -326,12 +327,13 @@ namespace BacktesterEngine
                             _signalsEngineDict.Add(IndicatorsEngine.DecideSignalsEngineId(broker.GetBrokerId(), marketInfo.GetMarket()), signalsEngine);
                         }
                         //find signals engine for this market
-                        IndicatorsEngine indicatorsEngine = _signalsEngineDict[IndicatorsEngine.DecideSignalsEngineId(Brokers.OANDA, group.First().Market)];
+                        IndicatorsEngine indicatorsEngine = _signalsEngineDict[IndicatorsEngine.DecideSignalsEngineId(Brokers.OANDA, group.Key)];
+                        var transactions = group.OrderBy(t => t.Timestamp);
                         //process indicators at the moment of the transaction
-                        indicatorsEngine.ProcessIndicatorsAtDate(bot._botParameters.TimeFrame, group.First().Timestamp);
+                        indicatorsEngine.ProcessIndicatorsAtDate(bot._botParameters.TimeFrame, indicatorsEngine.FromDate);
                         bot.UpdateSignals(indicatorsEngine);
                         //Process transaction
-                        List<Transaction> botTransactions = bot.GetTransactionsFromTelegramTransactions(group.ToList());
+                        List<Transaction> botTransactions = bot.GetTransactionsFromTelegramTransactions(transactions.ToList());
                         List<BacktesterTransaction> backtesterBotTransactions = new List<BacktesterTransaction>();
                         foreach (Transaction t in botTransactions)
                         {

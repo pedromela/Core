@@ -8,6 +8,7 @@ using BrokerLib.Models;
 using static BrokerLib.BrokerLib;
 using BrokerLib.Market;
 using BrokerLib.Exceptions;
+using System.Linq;
 
 namespace BrokerLib.Brokers
 {
@@ -161,30 +162,13 @@ namespace BrokerLib.Brokers
         const AuthTypes AUTHTYPE = AuthTypes.BearerToken;
 
         public OANDA()
-        : base(URL, AUTHTYPE, BrokerLib.Brokers.OANDA, BrokerType.margin, MarketTypes.Forex, AccessPoint.Construct("1"))
+        : base(URL, AUTHTYPE, BrokerLib.Brokers.OANDA, BrokerType.margin, MarketTypes.Forex, "_", AccessPoint.Construct("1"))
         {
         }
 
         public OANDA(string url, AuthTypes authType)
-        : base(url, authType, BrokerLib.Brokers.OANDA, BrokerType.margin, MarketTypes.Forex, AccessPoint.Construct("1"))
+        : base(url, authType, BrokerLib.Brokers.OANDA, BrokerType.margin, MarketTypes.Forex, "_", AccessPoint.Construct("1"))
         {
-        }
-
-        private string ParseMarket(string market) 
-        {
-            try
-            {
-                if (!market.Contains("_"))
-                {
-                     return market.Insert(3, "_");
-                }
-                return market;
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
         }
 
         public string DecideMarketType(string market) 
@@ -254,11 +238,11 @@ namespace BrokerLib.Brokers
                 Parser order = null;
                 if (transaction.Type == TransactionType.sell || transaction.Type == TransactionType.buy)
                 {
-                    order = new Order(amount.ToString(nfi), "MARKET", ParseMarket(transaction.Market), "DEFAULT", null, transaction.StopLoss.ToString(nfi), transaction.TakeProfit.ToString(nfi), null);
+                    order = new Order(amount.ToString(nfi), "MARKET", MarketInfo.ParseMarket(transaction.Market), "DEFAULT", null, transaction.StopLoss.ToString(nfi), transaction.TakeProfit.ToString(nfi), null);
                 }
                 else if (transaction.Type == TransactionType.sellclose || transaction.Type == TransactionType.buyclose)
                 {
-                    order = new OrderClose(amount.ToString(nfi), "MARKET", ParseMarket(transaction.Market), "DEFAULT", null, null);
+                    order = new OrderClose(amount.ToString(nfi), "MARKET", MarketInfo.ParseMarket(transaction.Market), "DEFAULT", null, null);
                 }
                 else
                 {
@@ -328,8 +312,8 @@ namespace BrokerLib.Brokers
         {
             try
             {
-                market = ParseMarket(market);
-                string data = String.Format("symbol={0}&side={1}&quantity={2:0.########}&type={3}", ParseMarket(market), TransactionType.buy.ToString(), amount.ToString(new CultureInfo("en-US")), "market");
+                market = MarketInfo.ParseMarket(market);
+                string data = String.Format("symbol={0}&side={1}&quantity={2:0.########}&type={3}", market, TransactionType.buy.ToString(), amount.ToString(new CultureInfo("en-US")), "market");
                 string url = _url + "accounts/" + accessPoint.Account + "/orders";
                 string response = Request.Post(url, accessPoint.BearerToken, data, "application/x-www-form-urlencoded");
             }
@@ -343,7 +327,7 @@ namespace BrokerLib.Brokers
         {
             try
             {
-                market = ParseMarket(market);
+                market = MarketInfo.ParseMarket(market);
                 string data = String.Format("symbol={0}&side={1}&quantity={2:0.########}&type={3}", market, TransactionType.buy.ToString(), amount.ToString(new CultureInfo("en-US")), "market");
                 string url = _url + "accounts/"+ accessPoint.Account + "/orders";
                 string response = Request.Post(url, accessPoint.BearerToken, data, "application/x-www-form-urlencoded");
@@ -479,7 +463,7 @@ namespace BrokerLib.Brokers
         {
             try
             {
-                market = ParseMarket(market);
+                market = MarketInfo.ParseMarket(market);
                 string timeFrameStr = timeFrame == TimeFrames.D1 ? timeFrame.ToString().Substring(0, 1) : timeFrame.ToString();
                 string url = String.Format(_url + "instruments/" + market + "/candles/?count={0}&granularity={1}", lastCount, timeFrameStr);
                 string response = Request.Get(url, _defaultAccessPoint.BearerToken, AuthTypes.BearerToken);

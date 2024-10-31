@@ -198,5 +198,22 @@ namespace BrokerLib.Market
             }
             return DateTime.Today;
         }
+
+        public static string ParseMarket(string market)
+        {
+            try
+            {
+                if (!market.Contains("_"))
+                {
+                    return market.Insert(3, "_");
+                }
+                return market;
+            }
+            catch (Exception e)
+            {
+                BrokerLib.DebugMessage(e);
+            }
+            return null;
+        }
     }
 }

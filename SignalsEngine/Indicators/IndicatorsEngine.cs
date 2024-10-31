@@ -23,6 +23,22 @@ namespace SignalsEngine.Indicators
 
         public readonly object Lock = new object();
 
+        public DateTime FromDate 
+        { 
+            get 
+            {
+                return _fromDate;
+            }
+        }
+
+        public DateTime ToDate
+        {
+            get
+            {
+                return _toDate;
+            }
+        }
+
         public IndicatorsEngine(Brokers broker, MarketInfo marketInfo)
         {
             _brokerId = broker;

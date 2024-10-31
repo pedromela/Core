@@ -56,25 +56,25 @@ namespace BrokerLib.Brokers
 
     public class BrokerView
     {
-        public int id { get; set; }
-        public string name { get; set; }
-        public int authMode { get; set; }
-        public string marketType { get; set; }
-        public string brokerType { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public int AuthMode { get; set; }
+        public string MarketType { get; set; }
+        public string BrokerType { get; set; }
 
 
-        public BrokerView(int _id, string _name, int _authMode, string _marketType, string _brokerType)
+        public BrokerView(int id, string name, int authMode, string marketType, string brokerType)
         {
-            id = _id;
-            name = _name;
-            authMode = _authMode;
-            marketType = _marketType;
-            brokerType = _brokerType;
+            Id = id;
+            Name = name;
+            AuthMode = authMode;
+            MarketType = marketType;
+            BrokerType = brokerType;
         }
 
     }
 
-    public class Broker
+    public abstract class Broker
     {
         protected string _url = "";
         protected AuthTypes _authType = AuthTypes.BasicAuth;
@@ -85,7 +85,9 @@ namespace BrokerLib.Brokers
         protected List<MarketInfo> _availableMarkets = new List<MarketInfo>();// switch to dictionary
         protected List<string> _activeMarketStrings = new List<string>();
         protected int _hourDifference = 0;
-        public Broker(string url, AuthTypes authType, BrokerLib.Brokers brokerId, BrokerType brokerType, MarketTypes marketType, AccessPoint defaultAccessPoint = null)
+        private string _marketSeparator;
+
+        public Broker(string url, AuthTypes authType, BrokerLib.Brokers brokerId, BrokerType brokerType, MarketTypes marketType, string marketSeparator, AccessPoint defaultAccessPoint = null)
         {
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("pt-PT");
 
@@ -94,6 +96,7 @@ namespace BrokerLib.Brokers
             _brokerDescription = new BrokerDescription(brokerId, brokerType);
             _marketType = marketType;
             _defaultAccessPoint = defaultAccessPoint;
+            _marketSeparator = marketSeparator;
             InitMarketsFirstTime(true);
             //_hourDifference = DateTime.Now - ;
         }
@@ -118,32 +121,17 @@ namespace BrokerLib.Brokers
             return _marketType;
         }
 
-        public virtual Trade Order(Transaction transaction, AccessPoint accessPoint, float amount)
-        {
-            return null;
-        }
-
-        public virtual void Buy(float amount, string market, AccessPoint accessPoint)
-        {
-
-        }
-        public virtual void Sell(float amount, string market, AccessPoint accessPoint)
-        {
-
-        }
-
-        public virtual Trade CloseTrade(Trade trade, Transaction transaction, AccessPoint accessPoint, string description = "")
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
-        }
+        public abstract Trade Order(Transaction transaction, AccessPoint accessPoint, float amount);
+        public abstract void Buy(float amount, string market, AccessPoint accessPoint);
+        public abstract void Sell(float amount, string market, AccessPoint accessPoint);
+        public abstract Trade CloseTrade(Trade trade, Transaction transaction, AccessPoint accessPoint, string description = "");
+        public abstract float GetCurrencyBalance(AccessPoint accessPoint, string market, float lastClose, bool invert = false);
+        public abstract float GetAvailableMarketBalance(AccessPoint accessPoint, string market, float lastClose, bool invert = false);
+        public abstract float GetTotalMarketBalance(AccessPoint accessPoint, string market, float lastClose, bool invert = false);
+        public abstract float GetAccountBalance(AccessPoint accessPoint);
+        public abstract List<Candle> GetLastCandles(string market, TimeFrames timeFrame, int lastCount = 1);
+        public abstract List<Candle> GetCandles(string market, TimeFrames timeFrame, DateTime fromDate, int lastCount);
+        public abstract void InitMarketsFirstTime(bool ignoreDiscovery = false);
 
         public virtual bool CheckEquity(TransactionType transactionType, Equity equity, Candle lastCandle, float amount)
         {
@@ -167,58 +155,6 @@ namespace BrokerLib.Brokers
 
         }
 
-        public virtual float GetAccountBalance(AccessPoint accessPoint)
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return 0;
-        }
-
-        public virtual float GetCurrencyBalance(AccessPoint accessPoint, string market, float lastClose, bool invert = false)
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return 0;
-        }
-
-        public virtual float GetAvailableMarketBalance(AccessPoint accessPoint, string market, float lastClose, bool invert = false)
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return 0;
-        }
-
-        public virtual float GetTotalMarketBalance(AccessPoint accessPoint, string market, float lastClose, bool invert = false)
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return 0;
-        }
-
         public Candle GetLastCandle(string market, TimeFrames timeFrame)
         {
             try
@@ -240,19 +176,6 @@ namespace BrokerLib.Brokers
                 {
                     BrokerLib.DebugMessage("Broker::GetLastCandle() : more than 1 candle.");
                 }
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
-        }
-
-        public virtual List<Candle> GetLastCandles(string market, TimeFrames timeFrame, int lastCount = 1)
-        {
-            try
-            {
-
             }
             catch (Exception e)
             {
@@ -329,32 +252,6 @@ namespace BrokerLib.Brokers
                 List<Candle> candles = GetCandles(market, timeFrame, fromDate, count);
 
                 return candles;
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
-        }
-
-        public virtual List<Candle> GetCandles(string market, TimeFrames timeFrame, DateTime fromDate, int lastCount)
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
-            return null;
-        }
-
-        public Candle PredictNextCandle()
-        {
-            try
-            {
-
             }
             catch (Exception e)
             {
@@ -450,18 +347,6 @@ namespace BrokerLib.Brokers
                 BrokerLib.DebugMessage(e);
             }
             return null;
-        }
-
-        public virtual void InitMarketsFirstTime(bool ignoreDiscovery = false)
-        {
-            try
-            {
-
-            }
-            catch (Exception e)
-            {
-                BrokerLib.DebugMessage(e);
-            }
         }
 
         public virtual void InitMarkets(List<string> activeMarketStrings = null, bool ignoreDiscovery = false)
@@ -578,6 +463,7 @@ namespace BrokerLib.Brokers
             }
             return null;
         }
+
         /////////////////////////////////////////////////////
         /////////////// STATIC FUNCTIONS ////////////////////
         /////////////////////////////////////////////////////
@@ -775,6 +661,10 @@ namespace BrokerLib.Brokers
         {
             try
             {
+                if (string.IsNullOrEmpty(market))
+                {
+                    return 0;
+                }
                 var markets = market.Split("_");
                 if (markets.Length != 2)
                 {
@@ -785,15 +675,11 @@ namespace BrokerLib.Brokers
                 market = market.Replace("_", "");
                 if (currency == "USD")
                 {
-                    Market = market;
+                    Market = $"{markets[0]}{_marketSeparator}{markets[1]}";
                 }
                 else
                 {
-                    Market = currency + "USD";
-                }
-                if (string.IsNullOrEmpty(market))
-                {
-                    return 0;
+                    Market = $"{currency}{_marketSeparator}USD";
                 }
                 try
                 {
@@ -811,7 +697,7 @@ namespace BrokerLib.Brokers
                 }
                 catch (Exception)
                 {
-                    Market = "USD" + currency;
+                    Market = $"USD{_marketSeparator}{currency}";
 
                     List<Candle> candles = GetLastCandles(Market, TimeFrames.H1);
 

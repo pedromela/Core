@@ -43,17 +43,17 @@ namespace BrokerLib.Brokers
         public const AuthTypes AUTHTYPE = AuthTypes.BasicAuth;
 
         public HitBTC()
-        : base(URL, AUTHTYPE, BrokerLib.Brokers.HitBTC, BrokerType.exchange, MarketTypes.Crypto)
+        : base(URL, AUTHTYPE, BrokerLib.Brokers.HitBTC, BrokerType.exchange, MarketTypes.Crypto, "")
         {
         }
 
         public HitBTC(bool margin = false)
-        : base(URL, AUTHTYPE, BrokerLib.Brokers.HitBTC, margin ? BrokerType.margin : BrokerType.exchange, MarketTypes.Crypto)
+        : base(URL, AUTHTYPE, BrokerLib.Brokers.HitBTC, margin ? BrokerType.margin : BrokerType.exchange, MarketTypes.Crypto, "")
         {
         }
 
         public HitBTC(string url, AuthTypes authType)
-        : base(url, authType, BrokerLib.Brokers.HitBTC, BrokerType.exchange, MarketTypes.Crypto)
+        : base(url, authType, BrokerLib.Brokers.HitBTC, BrokerType.exchange, MarketTypes.Crypto, "")
         {
         }
 
@@ -573,6 +573,11 @@ namespace BrokerLib.Brokers
                 BrokerLib.DebugMessage(e);
             }
             return 0;
+        }
+
+        public override float GetAccountBalance(AccessPoint accessPoint)
+        {
+            throw new NotImplementedException();
         }
     }
 }

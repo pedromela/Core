@@ -370,10 +370,9 @@ namespace BotEngine.Bot
             {
                 if (BotLib.BotLib.Backtest)
                 {
-                    using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
-                    {
-                        return backtesterContext.BacktesterTransactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).Count() > 0;
-                    }
+                    return BacktesterDBContext.Execute((backtesterContext) => {
+                        return backtesterContext.BacktesterTransactions.Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).Count() > 0;
+                    }, false);
                 }
                 else
                 {
@@ -397,11 +396,9 @@ namespace BotEngine.Bot
             {
                 if (BotLib.BotLib.Backtest)
                 {
-                    List<BacktesterTransaction> transactions = null;
-                    using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
-                    {
-                        transactions = backtesterContext.BacktesterTransactions.AsNoTracking().Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
-                    }
+                    List<BacktesterTransaction> transactions = BacktesterDBContext.Execute((backtesterContext) => {
+                         return backtesterContext.BacktesterTransactions.Where(t => t.BotId == _botParameters.id && t.Type.Equals(type)).ToList();
+                    }, false);
                     return transactions;
                 }
                 else
@@ -1593,22 +1590,22 @@ namespace BotEngine.Bot
             {
                 if (BotLib.BotLib.Backtest)
                 {
-                    using (var context = BacktesterDBContext.newDBContext())
-                    {
-                        _score = context.BacktesterScores.AsNoTracking().SingleOrDefault(s => s.BotParametersId == _botParameters.id);
-                        if (_score == null)
+                    _score = BacktesterDBContext.Execute((backtesterContext) => {
+                        var score = backtesterContext.BacktesterScores.SingleOrDefault(s => s.BotParametersId == _botParameters.id);
+                        if (score == null)
                         {
-                            _score = new BacktesterScore();
-                            _score.Positions = 0;
-                            _score.BotParametersId = _botParameters.id;
-                            _score.Successes = 0;
-                            _score.ActiveTransactions = 0;
-                            _score.CurrentProfit = 0.0f;
-                            _score.MaxDrawBack = 0.0f;
-                            context.BacktesterScores.Add((BacktesterScore)_score);
-                            context.SaveChanges();
+                            score = new BacktesterScore();
+                            score.Positions = 0;
+                            score.BotParametersId = _botParameters.id;
+                            score.Successes = 0;
+                            score.ActiveTransactions = 0;
+                            score.CurrentProfit = 0.0f;
+                            score.MaxDrawBack = 0.0f;
+                            backtesterContext.BacktesterScores.Add((BacktesterScore)score);
+                            backtesterContext.SaveChanges();
                         }
-                    }
+                        return score;
+                    }, false);
                 }
                 else
                 {

@@ -225,9 +225,9 @@ namespace BotEngine
                                             DebugMessage("TradingEngine::Init() : bot " + botParameters.id + " TimeFrame is invalid.");
                                         }
                                     }
+                                    _botDict[botParameters.TimeFrame].Add(botParameters.id, bot);
                                 }
 
-                                _botDict[botParameters.TimeFrame].Add(botParameters.id, bot);
                                 DebugMessage(String.Format("TradingEngine::Init() : Adding bot {1}/{0}", botParameters.id, botParameters.BotName));
                             });
                         }

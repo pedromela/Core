@@ -12,7 +12,7 @@ using static BrokerLib.BrokerLib;
 
 namespace TelegramEngine.Telegram
 {
-    public class TelegramBot : CFDBot
+    public class TelegramBot : MarginBot
     {
         public TelegramScrapper _scrapper = null;
         public readonly TelegramDBContext _telegramContext;

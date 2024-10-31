@@ -26,13 +26,14 @@ namespace TelegramEngine
         public const TimeFrames defaultTimeFrame = TimeFrames.M5;
         public string[] channelUrls = new string[] 
         {
-            "https://t.me/s/easyforexpips",
-            "https://t.me/s/Forexsignalsstreet",
-            "https://t.me/s/freesignalsfxnl",
-            "https://t.me/s/Free_Forex_Signals_ElevatingFX",
-            "https://t.me/s/free_forex_signals_fxlifestyle",
-            "https://t.me/s/TFXC_FREE",
-            "https://t.me/s/millionmoneyfx"
+            "https://t.me/s/M15_SIGNALS_LLC",
+            //"https://t.me/s/easyforexpips",
+            //"https://t.me/s/Forexsignalsstreet",
+            //"https://t.me/s/freesignalsfxnl",
+            //"https://t.me/s/Free_Forex_Signals_ElevatingFX",
+            //"https://t.me/s/free_forex_signals_fxlifestyle",
+            //"https://t.me/s/TFXC_FREE",
+            //"https://t.me/s/millionmoneyfx"
         };
 
         public TelegramEngine(TelegramDBContext telegramContext)

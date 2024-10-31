@@ -15,11 +15,10 @@ namespace BacktesterLib.Models
         {
             try
             {
-                using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
-                {
+                BacktesterDBContext.Execute((backtesterContext) => {
                     backtesterContext.BacktesterScores.Add(this);
-                    backtesterContext.SaveChanges();
-                }
+                    return backtesterContext.SaveChanges();
+                }, true);
             }
             catch (Exception e)
             {
@@ -31,11 +30,10 @@ namespace BacktesterLib.Models
         {
             try
             {
-                using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
-                {
+                BacktesterDBContext.Execute((backtesterContext) => {
                     backtesterContext.BacktesterScores.Update(this);
-                    backtesterContext.SaveChanges();
-                }
+                    return backtesterContext.SaveChanges();
+                }, true);
             }
             catch (Exception e)
             {

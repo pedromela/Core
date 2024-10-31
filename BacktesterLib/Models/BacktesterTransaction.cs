@@ -33,11 +33,10 @@ namespace BacktesterLib.Models
                     return;
                 }
                 id = Guid.NewGuid().ToString();
-                using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
-                {
+                BacktesterDBContext.Execute((backtesterContext) => {
                     backtesterContext.BacktesterTransactions.Add(this);
-                    backtesterContext.SaveChanges();
-                }
+                    return backtesterContext.SaveChanges();
+                }, true);
             }
             catch (Exception e)
             {
@@ -49,11 +48,10 @@ namespace BacktesterLib.Models
         {
             try
             {
-                using (BacktesterDBContext backtesterContext = BacktesterDBContext.newDBContext())
-                {
-                    backtesterContext.BacktesterTransactions.Update(this);
-                    backtesterContext.SaveChanges();
-                }
+                BacktesterDBContext.Execute((backtesterContext) => {
+                    //backtesterContext.BacktesterTransactions.Update(this);
+                    return backtesterContext.SaveChanges();
+                }, true);
             }
             catch (Exception e)
             {
